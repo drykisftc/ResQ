@@ -193,7 +193,7 @@ public class ResQTeleOp extends OpMode {
 	 * scaled value is less than linear.  This is to make it easier to drive
 	 * the robot more precisely at slower speeds.
 	 */
-	double scaleInput(double dVal)  {
+	double scaleInputArm(double dVal)  {
 		double[] scaleArray = { 0.0, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08,
 				0.09, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16,
 				0.17, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24,
@@ -233,12 +233,14 @@ public class ResQTeleOp extends OpMode {
 	 * scaled value is less than linear.  This is to make it easier to drive
 	 * the robot more precisely at slower speeds.
 	 */
-	double scaleInputArm(double dVal)  {
-		double[] scaleArray = { 0.0, 0.05, 0.09, 0.10, 0.12, 0.15, 0.18, 0.24,
-				0.30, 0.36, 0.43, 0.50, 0.60, 0.72, 0.85, 1.00, 1.00 };
+	double scaleInput(double dVal)  {
+		double[] scaleArray = { 0.0, 0.05, 0.09, 0.10, 0.12, 0.15, 0.18, 0.20,
+				0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.36,
+				0.38, 0.42, 0.46, 0.50, 0.54, 0.58, 0.62, 0.66,
+				0.70, 0.74, 0.78, 0.82, 0.86, 0.90, 0.94, 0.98, 1.00 };
 
 		// get the corresponding index for the scaleInput array.
-		int index = (int) (dVal * 16.0);
+		int index = (int) (dVal * 32.0);
 
 		// index should be positive.
 		if (index < 0) {
@@ -246,8 +248,8 @@ public class ResQTeleOp extends OpMode {
 		}
 
 		// index cannot exceed size of array minus 1.
-		if (index > 16) {
-			index = 16;
+		if (index > 32) {
+			index = 32;
 		}
 
 		// get value from the array.
