@@ -60,6 +60,8 @@ public class FtcOpModeRegister implements OpModeRegister {
     manager.register("K9TeleOp", K9TeleOp.class);
     manager.register ("PushBotAuto", PushBotAuto.class);
     manager.register ("PushBotManual", PushBotManual.class);
+    manager.register ("ResQTeleOp", ResQTeleOp.class);
+    manager.register("ResQAuto", ResQAuto.class);
 
     /*
      * Uncomment any of the following lines if you want to register an op mode.
