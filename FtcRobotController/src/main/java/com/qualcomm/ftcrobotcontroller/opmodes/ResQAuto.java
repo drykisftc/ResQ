@@ -35,6 +35,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 
 /**
  * TeleOp Mode
@@ -70,6 +71,7 @@ public class ResQAuto extends OpMode {
 	DcMotor motorLeft;
 	Servo claw;
 	Servo arm;
+	ColorSensor sensorRGB;
 
 	/**
 	 * Constructor
@@ -77,6 +79,17 @@ public class ResQAuto extends OpMode {
 	public ResQAuto() {
 
 	}
+
+	int [] stateArray = { 0, // init
+			1, // go straight
+			2, // turn
+			3, // find the beacon
+			4, // touch the button
+			5, // backup
+			6,// find the rampe with correct color
+			7,// climb up the ramp
+			8  }; // end
+	int state = -1;
 
 	/*
 	 * Code to run when the op mode is first enabled goes here
@@ -113,6 +126,8 @@ public class ResQAuto extends OpMode {
 		// assign the starting position of the wrist and claw
 		armPosition = 0.2;
 		clawPosition = 0.2;
+
+		state = 0;
 	}
 
 	/*
@@ -122,6 +137,56 @@ public class ResQAuto extends OpMode {
 	 */
 	@Override
 	public void loop() {
+
+		switch (state)
+		{
+			case 0:
+				// go straight
+				goStraight();
+				state = 1;
+                break;
+			case 1:
+				// turn
+				turn();
+                state =2;
+				break;
+			case 2:
+				// find the beacon
+                searchBeacon();
+				state =3;
+                break;
+			case 3:
+				// touch the button
+				touchButton();
+				break;
+			case 4:
+				// backup
+				backup();
+				break;
+			case 5:
+				// find the ramp with correct color
+                findRamp();
+				break;
+			case 6:
+				// climb up the ramp
+				climbRamp();
+				default:
+					// error
+
+		}
+		// go straight
+
+		// turn
+
+		// find the beacon
+
+		// touch the button
+
+		// backup
+
+		// find the rampe with correct color
+
+		// climb up the ramp
 
 		/*
 		 * Gamepad 1
@@ -242,5 +307,49 @@ public class ResQAuto extends OpMode {
 		// return scaled value.
 		return dScale;
 	}
+	int goStraight()
+	{
+		int errorCode =0;
+		if ( true) {
+			motorRight.setPower(0);
+			motorLeft.setPower(0);
+		}
+		else
+		{
+			motorRight.setPower(1.0);
+			motorLeft.setPower(1.0);
+		}
+		return errorCode;
+	}
 
+	int turn(){
+		int errorCode =0;
+		return errorCode;
+	}
+
+	int searchBeacon(){
+		int errorCode =0;
+		return errorCode;
+	}
+
+	int touchButton(){
+		int errorCode =0;
+		return errorCode;
+	}
+
+	int backup(){
+		int errorCode =0;
+		return errorCode;
+	}
+
+	int findRamp(){
+		int errorCode =0;
+		return errorCode;
+	}
+
+	int climbRamp(){
+		int errorCode =0;
+		return errorCode;
+	}
 }
+
