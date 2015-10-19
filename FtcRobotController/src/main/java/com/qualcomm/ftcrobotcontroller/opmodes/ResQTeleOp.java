@@ -33,7 +33,6 @@ package com.qualcomm.ftcrobotcontroller.opmodes;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
 /**
@@ -54,14 +53,16 @@ public class ResQTeleOp extends OpMode {
 	final static double CLAW_MIN_RANGE  = 0.20;
 	final static double CLAW_MAX_RANGE  = 0.7;
 
-	// position of the arm servo.
-	double armPosition;
+	// position of the left arm
+	double leftArmPosition;
+	double leftArmLastPower;
+
+	// position of the right arm
+	double rightArmPosition;
+	double rightArmLastPower;
 
 	// amount to change the arm servo position.
 	double armDelta = 0.1;
-
-	// position of the claw servo
-	double clawPosition;
 
 	// amount to change the claw servo position by
 	double clawDelta = 0.1;
@@ -112,8 +113,10 @@ public class ResQTeleOp extends OpMode {
 		motorTopLeft.setDirection(DcMotor.Direction.REVERSE);
 
 		// assign the starting position of the wrist and claw
-		armPosition = 0.2;
-		clawPosition = 0.2;
+		leftArmPosition = motorTopLeft.getCurrentPosition();
+		rightArmPosition = motorTopRight.getCurrentPosition();
+		leftArmLastPower = 0.0;
+		rightArmLastPower = 0.0;
 	}
 
 	/*
@@ -161,8 +164,26 @@ public class ResQTeleOp extends OpMode {
 		// write the values to the motors
 		motorBottomRight.setPower(right);
 		motorBottomLeft.setPower(left);
-		motorTopRight.setPower(rightArm);
-		motorTopLeft.setPower(leftArm);
+
+		// check whether motors go stuck
+		if (leftArmLastPower >= 0.5 && Math.abs(leftArmPosition - motorTopLeft.getCurrentPosition())<30) {
+			motorTopLeft.setPower(0.5); // lower power when arm stuck
+		}
+		else {
+			motorTopLeft.setPower(leftArm);
+		}
+
+		if (rightArmLastPower >=0.5 && Math.abs(rightArmPosition - motorTopRight.getCurrentPosition())<30) {
+			motorTopRight.setPower(0.5);
+		}
+		else {
+			motorTopRight.setPower(rightArm);
+		}
+
+		leftArmPosition = motorTopLeft.getCurrentPosition();
+		leftArmLastPower = leftArm;
+		rightArmPosition = motorTopRight.getCurrentPosition();
+		rightArmLastPower = rightArm;
 
 		/*
 		 * Send telemetry data back to driver station. Note that if we are using
@@ -172,8 +193,12 @@ public class ResQTeleOp extends OpMode {
 		 */
         telemetry.addData("left tgt pwr", "left  pwr: " + String.format("%.2f", left));
         telemetry.addData("right tgt pwr", "right pwr: " + String.format("%.2f", right));
-		telemetry.addData("left arm pwr",  "left  pwr: " + String.format("%.2f", leftArm));
-		telemetry.addData("right arm pwr", "right pwr: " + String.format("%.2f", rightArm));
+		telemetry.addData("left arm pwr",
+				"left  pwr: " + String.format("%.2f", leftArm)
+						+ " pos: " + String.format("%.2f", leftArmPosition));
+		telemetry.addData("right arm pwr",
+				"right pwr: " + String.format("%.2f", rightArm)
+						+ "pos: " + String.format("%.2f", rightArmPosition));
 
 	}
 
@@ -194,8 +219,8 @@ public class ResQTeleOp extends OpMode {
 	 * the robot more precisely at slower speeds.
 	 */
 	double scaleInputArm(double dVal)  {
-		double[] scaleArray = { 0.0, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08,
-				0.09, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16,
+		double[] scaleArray = { 0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07,
+				0.08, 0.09, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15,
 				0.17, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24,
 				0.25, 0.26, 0.27, 0.28, 0.29, 0.30, 0.31, 0.32,
 				0.33, 0.34, 0.35, 0.36, 0.37, 0.38, 0.39, 0.40,
