@@ -56,10 +56,14 @@ public class ResQTeleOp extends OpMode {
 	// position of the left arm
 	double leftArmPosition;
 	double leftArmLastPower;
+	double leftArmUpperLimit;
+	double leftArmLowerLimit;
 
 	// position of the right arm
 	double rightArmPosition;
 	double rightArmLastPower;
+	double rightArmUpperLimit;
+	double rightArmLowerLimit;
 
 	// amount to change the arm servo position.
 	double armDelta = 0.1;
@@ -114,8 +118,13 @@ public class ResQTeleOp extends OpMode {
 
 		// assign the starting position of the wrist and claw
 		leftArmPosition = motorTopLeft.getCurrentPosition();
-		rightArmPosition = motorTopRight.getCurrentPosition();
+		leftArmUpperLimit = leftArmPosition+100;
+		leftArmLowerLimit = leftArmPosition+ 3050;
 		leftArmLastPower = 0.0;
+
+		rightArmPosition = motorTopRight.getCurrentPosition();
+		rightArmUpperLimit = rightArmPosition+100;
+		rightArmLowerLimit = rightArmPosition + 3050;
 		rightArmLastPower = 0.0;
 	}
 
@@ -165,19 +174,37 @@ public class ResQTeleOp extends OpMode {
 		motorBottomRight.setPower(right);
 		motorBottomLeft.setPower(left);
 
-		// check whether motors go stuck
-		if (leftArmLastPower >= 0.5 && Math.abs(leftArmPosition - motorTopLeft.getCurrentPosition())<30) {
-			motorTopLeft.setPower(0.5); // lower power when arm stuck
+		// check motor limit
+		double leftArmCurrent = motorTopLeft.getCurrentPosition();
+		if ( leftArmCurrent< leftArmUpperLimit && leftArm <0) {
+			// do something to prevent jamming
+		}
+		else if  (leftArmCurrent > leftArmLowerLimit && leftArm >0) {
+			// do something to prevent jamming
 		}
 		else {
-			motorTopLeft.setPower(leftArm);
+			// check whether motors go stuck
+			if (Math.abs(leftArmLastPower) >= 0.5 && Math.abs(leftArmPosition - leftArmCurrent) < 30) {
+				motorTopLeft.setPower(leftArmLastPower*0.5); // lower power when arm stuck
+			} else {
+				motorTopLeft.setPower(leftArm);
+			}
 		}
 
-		if (rightArmLastPower >=0.5 && Math.abs(rightArmPosition - motorTopRight.getCurrentPosition())<30) {
-			motorTopRight.setPower(0.5);
+		double rightArmCurrent = motorTopRight.getCurrentPosition();
+		if (rightArmCurrent < rightArmUpperLimit && rightArm <0 ) {
+			// do something to prevent jamming
+		}
+		else if (rightArmCurrent > rightArmLowerLimit && rightArm >0)
+		{
+			// do something to prevent jamming
 		}
 		else {
-			motorTopRight.setPower(rightArm);
+			if (Math.abs(rightArmLastPower) >= 0.5 && Math.abs(rightArmPosition - rightArmCurrent) < 30) {
+				motorTopRight.setPower(rightArmLastPower*0.5);
+			} else {
+				motorTopRight.setPower(rightArm);
+			}
 		}
 
 		leftArmPosition = motorTopLeft.getCurrentPosition();
