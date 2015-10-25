@@ -48,28 +48,34 @@ public class ResQTeleOp extends OpMode {
 	 * Also, as the claw servo approaches 0, the claw opens up (drops the game element).
 	 */
 	// TETRIX VALUES.
-	final static double ARM_MIN_RANGE  = 0.20;
-	final static double ARM_MAX_RANGE  = 0.90;
-	final static double CLAW_MIN_RANGE  = 0.20;
-	final static double CLAW_MAX_RANGE  = 0.7;
+	final static float ARM_MIN_RANGE  = 0.20f;
+	final static float ARM_MAX_RANGE  = 0.90f;
+	final static float CLAW_MIN_RANGE  = 0.20f;
+	final static float CLAW_MAX_RANGE  = 0.7f;
+
+    int armMaxDelta = 3;
 
 	// position of the left arm
-	double leftArmPosition;
-	double leftArmLastPower;
-	double leftArmUpperLimit;
-	double leftArmLowerLimit;
+	int leftArmLastPos;
+    int leftArmLastReqPos;
+	float leftArmLastPower;
+	float leftArmUpperLimit;
+	float leftArmLowerLimit;
+	float leftArmPowerScale;
 
 	// position of the right arm
-	double rightArmPosition;
-	double rightArmLastPower;
-	double rightArmUpperLimit;
-	double rightArmLowerLimit;
+	int rightArmLastPos;
+    int rightArmLastReqPos;
+	float rightArmLastPower;
+	float rightArmUpperLimit;
+	float rightArmLowerLimit;
+	float rightArmPowerScale;
 
 	// amount to change the arm servo position.
-	double armDelta = 0.1;
+	float armDelta = 0.1f;
 
 	// amount to change the claw servo position by
-	double clawDelta = 0.1;
+	float clawDelta = 0.1f;
 
 	DcMotor motorBottomRight;
 	DcMotor motorBottomLeft;
@@ -117,15 +123,19 @@ public class ResQTeleOp extends OpMode {
 		motorTopLeft.setDirection(DcMotor.Direction.REVERSE);
 
 		// assign the starting position of the wrist and claw
-		leftArmPosition = motorTopLeft.getCurrentPosition();
-		leftArmUpperLimit = leftArmPosition+100;
-		leftArmLowerLimit = leftArmPosition+ 3050;
-		leftArmLastPower = 0.0;
+		leftArmLastPos = motorTopLeft.getCurrentPosition();
+        leftArmLastReqPos = leftArmLastPos;
+		leftArmUpperLimit = leftArmLastPos +100;
+		leftArmLowerLimit = leftArmLastPos + 3050;
+		leftArmLastPower = 0.0f;
+		leftArmPowerScale = 0.4f;
 
-		rightArmPosition = motorTopRight.getCurrentPosition();
-		rightArmUpperLimit = rightArmPosition+100;
-		rightArmLowerLimit = rightArmPosition + 3050;
-		rightArmLastPower = 0.0;
+		rightArmLastPos = motorTopRight.getCurrentPosition();
+        rightArmLastReqPos = rightArmLastPos;
+		rightArmUpperLimit = rightArmLastPos +100;
+		rightArmLowerLimit = rightArmLastPos + 3050;
+		rightArmLastPower = 0.0f;
+		rightArmPowerScale = 0.2f;
 	}
 
 	/*
@@ -139,8 +149,7 @@ public class ResQTeleOp extends OpMode {
 		/*
 		 * Gamepad 1
 		 * 
-		 * Gamepad 1 controls the motors via the left stick, and it controls the
-		 * wrist/claw via the a,b, x, y buttons
+		 * Left joystick controls the wheel motors. Right joystick controls the arms
 		 */
 
 		// throttle: left_stick_y ranges from -1 to 1, where -1 is full up, and
@@ -152,82 +161,59 @@ public class ResQTeleOp extends OpMode {
 		float right = throttle - direction;
 		float left = throttle + direction;
 
-		float throttleArm = -gamepad1.right_stick_y;
-		float directionArm = gamepad1.right_stick_x;
-		float rightArm = throttleArm - directionArm;
-		float leftArm = throttleArm + directionArm;
 
 		// clip the right/left values so that the values never exceed +/- 1
 		right = Range.clip(right, -1, 1);
 		left = Range.clip(left, -1, 1);
-		rightArm = Range.clip(rightArm, -1, 1);
-		leftArm = Range.clip(leftArm, -1, 1);
 
 		// scale the joystick value to make it easier to control
 		// the robot more precisely at slower speeds.
 		right = (float)scaleInput(right);
 		left =  (float)scaleInput(left);
-		rightArm = (float)scaleInputArm(rightArm);
-		leftArm =  (float)scaleInputArm(leftArm);
-		
-		// write the values to the motors
-		motorBottomRight.setPower(right);
-		motorBottomLeft.setPower(left);
 
-		// check motor limit
-		double leftArmCurrent = motorTopLeft.getCurrentPosition();
-		if ( leftArmCurrent< leftArmUpperLimit && leftArm <0) {
-			// do something to prevent jamming
-		}
-		else if  (leftArmCurrent > leftArmLowerLimit && leftArm >0) {
-			// do something to prevent jamming
-		}
-		else {
-			// check whether motors go stuck
-			if (Math.abs(leftArmLastPower) >= 0.5 && Math.abs(leftArmPosition - leftArmCurrent) < 30) {
-				motorTopLeft.setPower(leftArmLastPower*0.5); // lower power when arm stuck
-			} else {
-				motorTopLeft.setPower(leftArm);
-			}
-		}
+        // move wheels
+        motorBottomRight.setPower(right);
+        motorBottomLeft.setPower(left);
 
-		double rightArmCurrent = motorTopRight.getCurrentPosition();
-		if (rightArmCurrent < rightArmUpperLimit && rightArm <0 ) {
-			// do something to prevent jamming
-		}
-		else if (rightArmCurrent > rightArmLowerLimit && rightArm >0)
-		{
-			// do something to prevent jamming
-		}
-		else {
-			if (Math.abs(rightArmLastPower) >= 0.5 && Math.abs(rightArmPosition - rightArmCurrent) < 30) {
-				motorTopRight.setPower(rightArmLastPower*0.5);
-			} else {
-				motorTopRight.setPower(rightArm);
-			}
-		}
+        // move arms
+        float throttleArm = -gamepad1.right_stick_y;
+        float directionArm = gamepad1.right_stick_x;
+        float rightArm = throttleArm - directionArm;
+        float leftArm = throttleArm + directionArm;
+        if (gamepad1.left_bumper)
+        {
+            holdLeftArm();
+        }
+        else {
+            leftArm = Range.clip(leftArm, -1, 1);
+            //int leftArmCurrent = moveLeftArmDeltaPosition(leftArm, armMaxDelta);
+            leftArm = (float) scaleInputArm(leftArm) * leftArmPowerScale;
+            int leftArmCurrent = moveLeftArm(leftArm);
+            leftArmLastPos = leftArmCurrent;
+        }
 
-		leftArmPosition = motorTopLeft.getCurrentPosition();
-		leftArmLastPower = leftArm;
-		rightArmPosition = motorTopRight.getCurrentPosition();
-		rightArmLastPower = rightArm;
+        if (gamepad1.right_bumper)
+        {
+            holdRightArm();
+        }
+        else {
+            rightArm = Range.clip(rightArm, -1, 1);
+            //int rightArmCurrent = moveRightArmDeltaPosition(rightArm, armMaxDelta);
+            rightArm = (float) scaleInputArm(rightArm) * rightArmPowerScale;
+            int rightArmCurrent = moveRightArm(rightArm);
+            rightArmLastPos =rightArmCurrent;
+        }
 
-		/*
-		 * Send telemetry data back to driver station. Note that if we are using
-		 * a legacy NXT-compatible motor controller, then the getPower() method
-		 * will return a null value. The legacy NXT-compatible motor controllers
-		 * are currently write only.
-		 */
         telemetry.addData("left tgt pwr", "left  pwr: " + String.format("%.2f", left));
         telemetry.addData("right tgt pwr", "right pwr: " + String.format("%.2f", right));
-		telemetry.addData("left arm pwr",
-				"left  pwr: " + String.format("%.2f", leftArm)
-						+ " pos: " + String.format("%.2f", leftArmPosition));
-		telemetry.addData("right arm pwr",
-				"right pwr: " + String.format("%.2f", rightArm)
-						+ "pos: " + String.format("%.2f", rightArmPosition));
+        telemetry.addData("left arm pwr",
+                "left  pwr: " + String.format("%.2f", leftArm)
+                        + " pos: " + String.format("%05d", leftArmLastPos));
+        telemetry.addData("right arm pwr",
+                "right pwr: " + String.format("%.2f", rightArm)
+                        + "pos: " + String.format("%05d", rightArmLastPos));
 
-	}
+    }
 
 	/*
 	 * Code to run when the op mode is first disabled goes here
@@ -236,24 +222,26 @@ public class ResQTeleOp extends OpMode {
 	 */
 	@Override
 	public void stop() {
-
+        motorBottomRight.setPower(0.0f);
+        motorBottomLeft.setPower(0.0f);
+        moveLeftArm(0.0f);
+        moveRightArm(0.0f);
 	}
 
-    	
 	/*
 	 * This method scales the joystick input so for low joystick values, the 
 	 * scaled value is less than linear.  This is to make it easier to drive
 	 * the robot more precisely at slower speeds.
 	 */
-	double scaleInputArm(double dVal)  {
-		double[] scaleArray = { 0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07,
-				0.08, 0.09, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15,
-				0.17, 0.18, 0.19, 0.20, 0.21, 0.22, 0.23, 0.24,
-				0.25, 0.26, 0.27, 0.28, 0.29, 0.30, 0.31, 0.32,
-				0.33, 0.34, 0.35, 0.36, 0.37, 0.38, 0.39, 0.40,
-				0.41, 0.42, 0.43, 0.44, 0.45, 0.46, 0.47, 0.48,
-				0.49, 0.50, 0.51, 0.52, 0.53, 0.54, 0.55, 0.56,
-				0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 1.00 };
+	float scaleInputArm(float dVal)  {
+		float[] scaleArray = { 0.0f, 0.01f, 0.02f, 0.03f, 0.04f, 0.05f, 0.06f, 0.07f,
+				0.08f, 0.09f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f,
+				0.17f, 0.18f, 0.19f, 0.20f, 0.21f, 0.22f, 0.23f, 0.24f,
+				0.25f, 0.26f, 0.27f, 0.28f, 0.29f, 0.30f, 0.31f, 0.32f,
+				0.33f, 0.34f, 0.35f, 0.36f, 0.37f, 0.38f, 0.39f, 0.40f,
+				0.41f, 0.42f, 0.43f, 0.44f, 0.45f, 0.46f, 0.47f, 0.48f,
+				0.49f, 0.50f, 0.51f, 0.52f, 0.53f, 0.54f, 0.55f, 0.56f,
+				0.60f, 0.65f, 0.70f, 0.75f, 0.80f, 0.85f, 0.90f, 0.95f, 1.0f };
 		
 		// get the corresponding index for the scaleInput array.
 		int index = (int) (dVal * 64.0);
@@ -269,7 +257,7 @@ public class ResQTeleOp extends OpMode {
 		}
 
 		// get value from the array.
-		double dScale = 0.0;
+		float dScale = 0.0f;
 		if (dVal < 0) {
 			dScale = -scaleArray[index];
 		} else {
@@ -285,11 +273,11 @@ public class ResQTeleOp extends OpMode {
 	 * scaled value is less than linear.  This is to make it easier to drive
 	 * the robot more precisely at slower speeds.
 	 */
-	double scaleInput(double dVal)  {
-		double[] scaleArray = { 0.0, 0.05, 0.09, 0.10, 0.12, 0.15, 0.18, 0.20,
-				0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.36,
-				0.38, 0.42, 0.46, 0.50, 0.54, 0.58, 0.62, 0.66,
-				0.70, 0.74, 0.78, 0.82, 0.86, 0.90, 0.94, 0.98, 1.00 };
+	float scaleInput(float dVal)  {
+		float[] scaleArray = { 0.0f, 0.05f, 0.09f, 0.10f, 0.12f, 0.15f, 0.18f, 0.20f,
+				0.22f, 0.24f, 0.26f, 0.28f, 0.30f, 0.32f, 0.34f, 0.36f,
+				0.38f, 0.42f, 0.46f, 0.50f, 0.54f, 0.58f, 0.62f, 0.66f,
+				0.70f, 0.74f, 0.78f, 0.82f, 0.86f, 0.90f, 0.94f, 0.98f, 1.00f };
 
 		// get the corresponding index for the scaleInput array.
 		int index = (int) (dVal * 32.0);
@@ -305,7 +293,7 @@ public class ResQTeleOp extends OpMode {
 		}
 
 		// get value from the array.
-		double dScale = 0.0;
+		float dScale = 0.0f;
 		if (dVal < 0) {
 			dScale = -scaleArray[index];
 		} else {
@@ -316,4 +304,119 @@ public class ResQTeleOp extends OpMode {
 		return dScale;
 	}
 
+    int scaleInputArmPositionDelta(float dVal, int maxDelta)  {
+        float[] scaleArray = { 0.0f, 0.01f, 0.02f, 0.03f, 0.04f, 0.05f, 0.06f, 0.07f,
+                0.08f, 0.09f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f,
+                0.17f, 0.18f, 0.19f, 0.20f, 0.21f, 0.22f, 0.23f, 0.24f,
+                0.25f, 0.26f, 0.27f, 0.28f, 0.29f, 0.30f, 0.31f, 0.32f,
+                0.33f, 0.34f, 0.35f, 0.36f, 0.37f, 0.38f, 0.39f, 0.40f,
+                0.42f, 0.44f, 0.46f, 0.48f, 0.5f, 0.52f, 0.54f, 0.56f,
+                0.58f, 0.60f, 0.62f, 0.64f, 0.66f, 0.68f, 0.70f, 0.72f,
+                0.75f, 0.80f, 0.83f, 0.86f, 0.89f, 0.92f, 0.95f, 0.98f, 1.0f };
+
+        // get the corresponding index for the scaleInput array.
+        int index = (int) (dVal * 64.0);
+
+        // index should be positive.
+        if (index < 0) {
+            index = -index;
+        }
+
+        // index cannot exceed size of array minus 1.
+        if (index > 64) {
+            index = 64;
+        }
+
+        // get value from the array.
+        float dScale = 0.0f;
+        if (dVal < 0) {
+            dScale = -scaleArray[index];
+        } else {
+            dScale = scaleArray[index];
+        }
+
+        // return scaled value.
+        return (int)dScale*maxDelta;
+    }
+
+	int moveLeftArm(float leftArmPower)
+	{
+		// check motor limit
+		int leftArmCurrent = motorTopLeft.getCurrentPosition();
+		if ( leftArmCurrent< leftArmUpperLimit && leftArmPower <0) {
+			// do something to prevent jamming
+		}
+		else if  (leftArmCurrent > leftArmLowerLimit && leftArmPower >0) {
+			// do something to prevent jamming
+		}
+		else {
+			// check whether motors go stuck
+			if (Math.abs(leftArmLastPower) >= 0.5 && Math.abs(leftArmLastPos - leftArmCurrent) < 30) {
+				motorTopLeft.setPower(leftArmLastPower*0.5); // lower power when arm stuck
+			} else {
+				motorTopLeft.setPower(leftArmPower);
+			}
+		}
+        leftArmLastPower = leftArmPower;
+		return leftArmCurrent;
+	}
+	
+	int moveRightArm(float rightArmPower)
+	{
+        int rightArmCurrent = motorTopRight.getCurrentPosition();
+        if (rightArmCurrent < rightArmUpperLimit && rightArmPower <0 ) {
+            // do something to prevent jamming
+        }
+        else if (rightArmCurrent > rightArmLowerLimit && rightArmPower >0)
+        {
+            // do something to prevent jamming
+        }
+        else {
+            if (Math.abs(rightArmLastPower) >= 0.5 && Math.abs(rightArmLastPos - rightArmCurrent) < 30) {
+                motorTopRight.setPower(rightArmLastPower*0.5);
+            } else {
+                motorTopRight.setPower(rightArmPower);
+            }
+        }
+        rightArmLastPower = rightArmPower;
+        return rightArmCurrent;
+	}
+
+    void holdLeftArm ()
+    {
+        motorTopLeft.setTargetPosition(leftArmLastPos);
+    }
+
+    void holdRightArm()
+    {
+        motorTopRight.setTargetPosition(rightArmLastPos);
+    }
+
+    int moveLeftArmDeltaPosition(float delta, int maxDelta)
+    {
+        int armCurrent = motorTopLeft.getCurrentPosition();
+        int nextPosition = scaleInputArmPositionDelta(delta, maxDelta) + armCurrent;
+        if (nextPosition > leftArmUpperLimit && nextPosition < leftArmLowerLimit ) {
+            motorTopLeft.setTargetPosition(nextPosition);
+            leftArmLastReqPos = nextPosition;
+        }
+        else {
+            moveLeftArm(delta);
+        }
+        return armCurrent;
+    }
+
+    int moveRightArmDeltaPosition(float delta, int maxDelta)
+    {
+        int rightArmCurrent = motorTopRight.getCurrentPosition();
+        int nextPosition = scaleInputArmPositionDelta(delta, maxDelta) + rightArmCurrent;
+        if (nextPosition > rightArmUpperLimit && nextPosition < rightArmLowerLimit ) {
+            motorTopRight.setTargetPosition(nextPosition);
+            rightArmLastReqPos = nextPosition;
+        }
+        else {
+            moveRightArm(delta);
+        }
+        return rightArmCurrent;
+    }
 }
