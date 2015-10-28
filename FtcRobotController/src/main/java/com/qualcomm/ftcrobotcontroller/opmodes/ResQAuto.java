@@ -123,6 +123,8 @@ public class ResQAuto extends OpMode {
 		arm = hardwareMap.servo.get("servo_1");
 		claw = hardwareMap.servo.get("servo_6");
 
+		sensorRGB = hardwareMap.colorSensor.get("mr");
+
 		// assign the starting position of the wrist and claw
 		armPosition = 0.2;
 		clawPosition = 0.2;

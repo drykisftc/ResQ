@@ -59,16 +59,20 @@ public class ResQTeleOp extends OpMode {
 	int leftArmLastPos;
     int leftArmLastReqPos;
 	float leftArmLastPower;
-	float leftArmUpperLimit;
-	float leftArmLowerLimit;
+	int leftArmUpperLimit;
+	int leftArmLowerLimit;
+	int leftArmLoadPosition;
+	int leftArmUnloadPosition;
 	float leftArmPowerScale;
 
 	// position of the right arm
 	int rightArmLastPos;
     int rightArmLastReqPos;
 	float rightArmLastPower;
-	float rightArmUpperLimit;
-	float rightArmLowerLimit;
+	int rightArmUpperLimit;
+	int rightArmLowerLimit;
+	int rightArmLoadPosition;
+	int rightArmUnloadPosition;
 	float rightArmPowerScale;
 
 	// amount to change the arm servo position.
@@ -120,20 +124,24 @@ public class ResQTeleOp extends OpMode {
 
 		motorTopRight = hardwareMap.dcMotor.get("topRightM");
 		motorTopLeft = hardwareMap.dcMotor.get("topLeftM");
-		motorTopLeft.setDirection(DcMotor.Direction.REVERSE);
+		motorTopRight.setDirection(DcMotor.Direction.REVERSE);
 
 		// assign the starting position of the wrist and claw
 		leftArmLastPos = motorTopLeft.getCurrentPosition();
         leftArmLastReqPos = leftArmLastPos;
 		leftArmUpperLimit = leftArmLastPos +100;
-		leftArmLowerLimit = leftArmLastPos + 3050;
+		leftArmLoadPosition = leftArmLastPos + 3300;
+		leftArmUnloadPosition = leftArmLoadPosition;
+		leftArmLowerLimit = leftArmLastPos + 5000;
 		leftArmLastPower = 0.0f;
-		leftArmPowerScale = 0.4f;
+		leftArmPowerScale = 0.5f;
 
 		rightArmLastPos = motorTopRight.getCurrentPosition();
         rightArmLastReqPos = rightArmLastPos;
 		rightArmUpperLimit = rightArmLastPos +100;
-		rightArmLowerLimit = rightArmLastPos + 3050;
+		rightArmLoadPosition = rightArmLastPos + 3300;
+		rightArmUnloadPosition = rightArmLoadPosition -500;
+		rightArmLowerLimit = rightArmLastPos + 5000;
 		rightArmLastPower = 0.0f;
 		rightArmPowerScale = 0.2f;
 	}
@@ -180,6 +188,21 @@ public class ResQTeleOp extends OpMode {
         float directionArm = gamepad1.right_stick_x;
         float rightArm = throttleArm - directionArm;
         float leftArm = throttleArm + directionArm;
+
+		// load position
+		if (gamepad1.dpad_down)
+		{
+			motorTopLeft.setTargetPosition(leftArmLoadPosition);
+			motorTopRight.setTargetPosition(rightArmLoadPosition);
+		}
+
+		// unload position
+		if (gamepad1.dpad_right)
+		{
+			motorTopLeft.setTargetPosition(leftArmUnloadPosition);
+			motorTopRight.setTargetPosition(rightArmUnloadPosition);
+		}
+
         if (gamepad1.left_bumper)
         {
             holdLeftArm();
