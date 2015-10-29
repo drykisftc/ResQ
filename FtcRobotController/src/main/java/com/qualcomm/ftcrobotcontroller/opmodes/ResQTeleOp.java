@@ -33,6 +33,7 @@ package com.qualcomm.ftcrobotcontroller.opmodes;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorController;
 import com.qualcomm.robotcore.util.Range;
 
 /**
@@ -143,7 +144,7 @@ public class ResQTeleOp extends OpMode {
 		rightArmUnloadPosition = rightArmLoadPosition -500;
 		rightArmLowerLimit = rightArmLastPos + 5000;
 		rightArmLastPower = 0.0f;
-		rightArmPowerScale = 0.2f;
+		rightArmPowerScale = 0.3f;
 	}
 
 	/*
@@ -192,49 +193,56 @@ public class ResQTeleOp extends OpMode {
 		// load position
 		if (gamepad1.dpad_down)
 		{
+            motorTopLeft.setChannelMode(DcMotorController.RunMode.RUN_TO_POSITION);
+            motorTopRight.setChannelMode(DcMotorController.RunMode.RUN_TO_POSITION);
 			motorTopLeft.setTargetPosition(leftArmLoadPosition);
 			motorTopRight.setTargetPosition(rightArmLoadPosition);
-		}
-
-		// unload position
-		if (gamepad1.dpad_right)
+			telemetry.addData("load debris",
+					"left:" + String.format("%05d", leftArmLoadPosition)
+							+ " right:"+String.format("%05d", rightArmLoadPosition));
+		} else if (gamepad1.dpad_right) // unload position
 		{
+            motorTopLeft.setChannelMode(DcMotorController.RunMode.RUN_TO_POSITION);
+            motorTopRight.setChannelMode(DcMotorController.RunMode.RUN_TO_POSITION);
 			motorTopLeft.setTargetPosition(leftArmUnloadPosition);
 			motorTopRight.setTargetPosition(rightArmUnloadPosition);
+			telemetry.addData("Unload debris",
+					"left:" + String.format("%05d", leftArmLoadPosition)
+							+ " right:" + String.format("%05d", rightArmLoadPosition));
+		}
+		else {
+
+			if (gamepad1.left_bumper) {
+				holdLeftArm();
+			} else {
+				leftArm = Range.clip(leftArm, -1, 1);
+				//int leftArmCurrent = moveLeftArmDeltaPosition(leftArm, armMaxDelta);
+				leftArm = (float) scaleInputArm(leftArm) * leftArmPowerScale;
+				int leftArmCurrent = moveLeftArm(leftArm);
+				leftArmLastPos = leftArmCurrent;
+                telemetry.addData("left ARM ",
+                        "pwr: " + String.format("%.2f", leftArm)
+                                + " pos: " + String.format("%05d", leftArmLastPos));
+			}
+
+			if (gamepad1.right_bumper) {
+				holdRightArm();
+			} else {
+				rightArm = Range.clip(rightArm, -1, 1);
+				//int rightArmCurrent = moveRightArmDeltaPosition(rightArm, armMaxDelta);
+				rightArm = (float) scaleInputArm(rightArm) * rightArmPowerScale;
+				int rightArmCurrent = moveRightArm(rightArm);
+				rightArmLastPos = rightArmCurrent;
+                telemetry.addData("right ARM ",
+                        "pwr: " + String.format("%.2f", rightArm)
+                                + "pos: " + String.format("%05d", rightArmLastPos));
+			}
 		}
 
-        if (gamepad1.left_bumper)
-        {
-            holdLeftArm();
-        }
-        else {
-            leftArm = Range.clip(leftArm, -1, 1);
-            //int leftArmCurrent = moveLeftArmDeltaPosition(leftArm, armMaxDelta);
-            leftArm = (float) scaleInputArm(leftArm) * leftArmPowerScale;
-            int leftArmCurrent = moveLeftArm(leftArm);
-            leftArmLastPos = leftArmCurrent;
-        }
-
-        if (gamepad1.right_bumper)
-        {
-            holdRightArm();
-        }
-        else {
-            rightArm = Range.clip(rightArm, -1, 1);
-            //int rightArmCurrent = moveRightArmDeltaPosition(rightArm, armMaxDelta);
-            rightArm = (float) scaleInputArm(rightArm) * rightArmPowerScale;
-            int rightArmCurrent = moveRightArm(rightArm);
-            rightArmLastPos =rightArmCurrent;
-        }
-
-        telemetry.addData("left tgt pwr", "left  pwr: " + String.format("%.2f", left));
-        telemetry.addData("right tgt pwr", "right pwr: " + String.format("%.2f", right));
-        telemetry.addData("left arm pwr",
-                "left  pwr: " + String.format("%.2f", leftArm)
-                        + " pos: " + String.format("%05d", leftArmLastPos));
-        telemetry.addData("right arm pwr",
-                "right pwr: " + String.format("%.2f", rightArm)
-                        + "pos: " + String.format("%05d", rightArmLastPos));
+        telemetry.addData("left WHEEL ",
+                "pwr: " + String.format("%.2f", left));
+        telemetry.addData("right WHEEL",
+                "pwr: " +String.format("%.2f", right));
 
     }
 
@@ -365,6 +373,7 @@ public class ResQTeleOp extends OpMode {
 	int moveLeftArm(float leftArmPower)
 	{
 		// check motor limit
+        motorTopLeft.setChannelMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
 		int leftArmCurrent = motorTopLeft.getCurrentPosition();
 		if ( leftArmCurrent< leftArmUpperLimit && leftArmPower <0) {
 			// do something to prevent jamming
@@ -387,6 +396,7 @@ public class ResQTeleOp extends OpMode {
 	int moveRightArm(float rightArmPower)
 	{
         int rightArmCurrent = motorTopRight.getCurrentPosition();
+        motorTopRight.setChannelMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
         if (rightArmCurrent < rightArmUpperLimit && rightArmPower <0 ) {
             // do something to prevent jamming
         }
@@ -407,11 +417,13 @@ public class ResQTeleOp extends OpMode {
 
     void holdLeftArm ()
     {
+        motorTopLeft.setChannelMode(DcMotorController.RunMode.RUN_TO_POSITION);
         motorTopLeft.setTargetPosition(leftArmLastPos);
     }
 
     void holdRightArm()
     {
+        motorTopRight.setChannelMode(DcMotorController.RunMode.RUN_TO_POSITION);
         motorTopRight.setTargetPosition(rightArmLastPos);
     }
 
