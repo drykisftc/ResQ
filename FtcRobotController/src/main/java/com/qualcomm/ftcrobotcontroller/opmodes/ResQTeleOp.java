@@ -43,17 +43,6 @@ import com.qualcomm.robotcore.util.Range;
  */
 public class ResQTeleOp extends OpMode {
 
-	/*
-	 * Note: the configuration of the servos is such that
-	 * as the arm servo approaches 0, the arm position moves up (away from the floor).
-	 * Also, as the claw servo approaches 0, the claw opens up (drops the game element).
-	 */
-	// TETRIX VALUES.
-	final static float ARM_MIN_RANGE  = 0.20f;
-	final static float ARM_MAX_RANGE  = 0.90f;
-	final static float CLAW_MIN_RANGE  = 0.20f;
-	final static float CLAW_MAX_RANGE  = 0.7f;
-
     int armMaxDelta = 3;
 
 	// position of the left arm
@@ -102,23 +91,6 @@ public class ResQTeleOp extends OpMode {
 	@Override
 	public void init() {
 
-
-		/*
-		 * Use the hardwareMap to get the dc motors and servos by name. Note
-		 * that the names of the devices must match the names used when you
-		 * configured your robot and created the configuration file.
-		 */
-		
-		/*
-		 * For the demo Tetrix K9 bot we assume the following,
-		 *   There are two motors "motor_1" and "motor_2"
-		 *   "motor_1" is on the right side of the bot.
-		 *   "motor_2" is on the left side of the bot and reversed.
-		 *   
-		 * We also assume that there are two servos "servo_1" and "servo_6"
-		 *    "servo_1" controls the arm joint of the manipulator.
-		 *    "servo_6" controls the claw joint of the manipulator.
-		 */
 		motorBottomRight = hardwareMap.dcMotor.get("bottomRightM");
 		motorBottomLeft = hardwareMap.dcMotor.get("bottomLeftM");
 		motorBottomLeft.setDirection(DcMotor.Direction.REVERSE);
@@ -157,7 +129,7 @@ public class ResQTeleOp extends OpMode {
 
 		/*
 		 * Gamepad 1
-		 * 
+		 *
 		 * Left joystick controls the wheel motors. Right joystick controls the arms
 		 */
 
@@ -177,8 +149,8 @@ public class ResQTeleOp extends OpMode {
 
 		// scale the joystick value to make it easier to control
 		// the robot more precisely at slower speeds.
-		right = (float)scaleInput(right);
-		left =  (float)scaleInput(left);
+		right = scaleInput(right);
+		left =  scaleInput(left);
 
         // move wheels
         motorBottomRight.setPower(right);
@@ -217,9 +189,8 @@ public class ResQTeleOp extends OpMode {
 			} else {
 				leftArm = Range.clip(leftArm, -1, 1);
 				//int leftArmCurrent = moveLeftArmDeltaPosition(leftArm, armMaxDelta);
-				leftArm = (float) scaleInputArm(leftArm) * leftArmPowerScale;
-				int leftArmCurrent = moveLeftArm(leftArm);
-				leftArmLastPos = leftArmCurrent;
+				leftArm = scaleInputArm(leftArm) * leftArmPowerScale;
+				leftArmLastPos = moveLeftArm(leftArm);
                 telemetry.addData("left ARM ",
                         "pwr: " + String.format("%.2f", leftArm)
                                 + " pos: " + String.format("%05d", leftArmLastPos));
@@ -231,8 +202,7 @@ public class ResQTeleOp extends OpMode {
 				rightArm = Range.clip(rightArm, -1, 1);
 				//int rightArmCurrent = moveRightArmDeltaPosition(rightArm, armMaxDelta);
 				rightArm = (float) scaleInputArm(rightArm) * rightArmPowerScale;
-				int rightArmCurrent = moveRightArm(rightArm);
-				rightArmLastPos = rightArmCurrent;
+				rightArmLastPos = moveRightArm(rightArm);
                 telemetry.addData("right ARM ",
                         "pwr: " + String.format("%.2f", rightArm)
                                 + "pos: " + String.format("%05d", rightArmLastPos));
@@ -260,7 +230,7 @@ public class ResQTeleOp extends OpMode {
 	}
 
 	/*
-	 * This method scales the joystick input so for low joystick values, the 
+	 * This method scales the joystick input so for low joystick values, the
 	 * scaled value is less than linear.  This is to make it easier to drive
 	 * the robot more precisely at slower speeds.
 	 */
@@ -273,10 +243,10 @@ public class ResQTeleOp extends OpMode {
 				0.41f, 0.42f, 0.43f, 0.44f, 0.45f, 0.46f, 0.47f, 0.48f,
 				0.49f, 0.50f, 0.51f, 0.52f, 0.53f, 0.54f, 0.55f, 0.56f,
 				0.60f, 0.65f, 0.70f, 0.75f, 0.80f, 0.85f, 0.90f, 0.95f, 1.0f };
-		
+
 		// get the corresponding index for the scaleInput array.
 		int index = (int) (dVal * 64.0);
-		
+
 		// index should be positive.
 		if (index < 0) {
 			index = -index;
@@ -392,7 +362,7 @@ public class ResQTeleOp extends OpMode {
         leftArmLastPower = leftArmPower;
 		return leftArmCurrent;
 	}
-	
+
 	int moveRightArm(float rightArmPower)
 	{
         int rightArmCurrent = motorTopRight.getCurrentPosition();
