@@ -199,6 +199,7 @@ public class ResQAuto extends ResQTeleOp {
 		int stateCode =1;
 
         // turn left until camera see beacon
+		
 //        if (false)
 //        {
 //            motorBottomRight.setPower(searchPower);
