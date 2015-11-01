@@ -69,9 +69,9 @@ public class ResQTeleOp extends OpMode {
 	// amount to change the arm servo position.
 	float scooperDelta = 0.1f;
 	float scooperPosition = 0.1f;
-    float scooperParkingPos = 0.6f;
-    float scooperMin = 0.0f;
-    float scooperMax = 1.0f;
+    float scooperParkingPos = 0.5f;
+    float scooperMin = 0.1f;
+    float scooperMax = 0.9f;
 
 	DcMotor motorBottomRight;
 	DcMotor motorBottomLeft;
@@ -124,6 +124,8 @@ public class ResQTeleOp extends OpMode {
 		rightArmLastPower = 0.0f;
 		rightArmPowerScale = 0.3f;
 
+        scooper.setPosition(scooperParkingPos);
+
 	}
 
 	/*
@@ -152,7 +154,7 @@ public class ResQTeleOp extends OpMode {
 
 		// clip the right/left values so that the values never exceed +/- 1
 		right = Range.clip(right, -1, 1);
-		left = Range.clip(left, -1, 1);
+        left = Range.clip(left, -1, 1);
 
 		// scale the joystick value to make it easier to control
 		// the robot more precisely at slower speeds.
@@ -218,9 +220,9 @@ public class ResQTeleOp extends OpMode {
 
 		// update the position of the arm.
 		if (gamepad1.x) {
-            scooper.setDirection(Servo.Direction.REVERSE);
-            scooper.setPosition(0.6);
+            scooper.setPosition(scooperMax);
 		} else {
+            scooper.setPosition(scooperMin);
 		}
 
         // logging
@@ -240,6 +242,7 @@ public class ResQTeleOp extends OpMode {
         motorBottomLeft.setPower(0.0f);
         moveLeftArm(0.0f);
         moveRightArm(0.0f);
+        scooper.setPosition(scooperParkingPos);
 	}
 
 	/*
