@@ -34,6 +34,7 @@ package com.qualcomm.ftcrobotcontroller.opmodes;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorController;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
 /**
@@ -66,15 +67,18 @@ public class ResQTeleOp extends OpMode {
 	float rightArmPowerScale;
 
 	// amount to change the arm servo position.
-	float armDelta = 0.1f;
-
-	// amount to change the claw servo position by
-	float clawDelta = 0.1f;
+	float scooperDelta = 0.1f;
+	float scooperPosition = 0.1f;
+    float scooperParkingPos = 0.6f;
+    float scooperMin = 0.0f;
+    float scooperMax = 1.0f;
 
 	DcMotor motorBottomRight;
 	DcMotor motorBottomLeft;
 	DcMotor motorTopRight;
 	DcMotor motorTopLeft;
+
+	Servo scooper;
 
 	/**
 	 * Constructor
@@ -99,6 +103,8 @@ public class ResQTeleOp extends OpMode {
 		motorTopLeft = hardwareMap.dcMotor.get("topLeftM");
 		motorTopRight.setDirection(DcMotor.Direction.REVERSE);
 
+		scooper = hardwareMap.servo.get("scooper");
+
 		// assign the starting position of the wrist and claw
 		leftArmLastPos = motorTopLeft.getCurrentPosition();
         leftArmLastReqPos = leftArmLastPos;
@@ -117,6 +123,7 @@ public class ResQTeleOp extends OpMode {
 		rightArmLowerLimit = rightArmLastPos + 5000;
 		rightArmLastPower = 0.0f;
 		rightArmPowerScale = 0.3f;
+
 	}
 
 	/*
@@ -209,11 +216,17 @@ public class ResQTeleOp extends OpMode {
 			}
 		}
 
-        telemetry.addData("left WHEEL ",
-                "pwr: " + String.format("%.2f", left));
-        telemetry.addData("right WHEEL",
-                "pwr: " +String.format("%.2f", right));
+		// update the position of the arm.
+		if (gamepad1.x) {
+            scooper.setDirection(Servo.Direction.REVERSE);
+            scooper.setPosition(0.6);
+		} else {
+		}
 
+        // logging
+        telemetry.addData("left WHEEL ", "pwr: " + String.format("%.2f", left));
+        telemetry.addData("right WHEEL", "pwr: " +String.format("%.2f", right));
+        telemetry.addData("scooper", "pos: " +String.format("%.2g", scooper.getPosition()));
     }
 
 	/*
