@@ -36,6 +36,8 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.hardware.ColorSensor;
+import com.qualcomm.robotcore.hardware.OpticalDistanceSensor;
+
 
 /**
  * TeleOp Mode
@@ -44,7 +46,20 @@ import com.qualcomm.robotcore.hardware.ColorSensor;
  */
 public class ResQAuto extends ResQTeleOp {
 
-		ColorSensor sensorRGB;
+	ColorSensor sensorRGB;
+
+	OpticalDistanceSensor sensorODS;
+
+	float colorSensitivity = 1.25f;
+
+	char targetColor = 'b';
+
+	long startTime =0;
+
+	long timeBudget = 30000; // 30 seconds
+
+    float cruisePower = 0.4f;
+    float searchPower = 0.25f;
 
 	/**
 	 * Constructor
@@ -74,7 +89,17 @@ public class ResQAuto extends ResQTeleOp {
 
         super.init();
 
+		sensorRGB = hardwareMap.colorSensor.get("armColor");
+		sensorODS = hardwareMap.opticalDistanceSensor.get("armODS");
+
 		state = 0;
+	}
+
+	public void start (){
+
+		startTime = System.currentTimeMillis();
+        sensorRGB.enableLed(true);
+        sensorODS.enableLed(true);
 	}
 
 	/*
@@ -85,55 +110,58 @@ public class ResQAuto extends ResQTeleOp {
 	@Override
 	public void loop() {
 
-		switch (state)
+		if (System.currentTimeMillis() - startTime > timeBudget)
 		{
-			case 0:
-				// go straight
-				goStraight();
-				state = 1;
-                break;
-			case 1:
-				// turn
-				turn();
-                state =2;
-				break;
-			case 2:
-				// find the beacon
-                searchBeacon();
-				state =3;
-                break;
-			case 3:
-				// touch the button
-				touchButton();
-				break;
-			case 4:
-				// backup
-				backup();
-				break;
-			case 5:
-				// find the ramp with correct color
-                findRamp();
-				break;
-			case 6:
-				// climb up the ramp
-				climbRamp();
+			stop();
+		} else {
+
+			switch (state) {
+				case 0:
+					// go straight
+					state = goStraight();
+					break;
+				case 1:
+					// turn
+					state = turn();
+					break;
+				case 2:
+					// find the beacon
+					searchBeacon();
+					state = 3;
+					break;
+				case 3:
+					// touch the button
+					touchButton();
+					break;
+				case 4:
+					// backup
+					backup();
+					break;
+				case 5:
+					// find the ramp with correct color
+					findRamp();
+					break;
+				case 6:
+					// climb up the ramp
+					climbRamp();
 				default:
 					// error
 
+			}
+			// go straight
+
+			// turn
+
+			// find the beacon
+
+			// touch the button
+
+			// backup
+
+			// find the rampe with correct color
+
+			// climb up the ramp
 		}
-		// go straight
-
-		// turn
-
-		// find the beacon
-
-		// touch the button
-
-		// backup
-
-		// find the rampe with correct color
-
-		// climb up the ramp
 
 	}
 
@@ -144,32 +172,53 @@ public class ResQAuto extends ResQTeleOp {
 	 */
 	@Override
 	public void stop() {
-
+        super.stop();
+        sensorRGB.enableLed(false);
+        sensorODS.enableLed(false);
 	}
 
 	int goStraight()
 	{
-		int errorCode =0;
-		if ( true) {
+		int stateCode =0;
+        char color = getColor(colorSensitivity);
+
+		if ( color == 'b' || color == 'r' ) {
 			motorBottomRight.setPower(0);
 			motorBottomLeft.setPower(0);
+			return 1;
 		}
 		else
 		{
-			motorBottomRight.setPower(1.0);
-			motorBottomLeft.setPower(1.0);
+			motorBottomRight.setPower(cruisePower);
+			motorBottomLeft.setPower(cruisePower);
 		}
-		return errorCode;
+		return stateCode;
 	}
 
 	int turn(){
-		int errorCode =0;
-		return errorCode;
+		int stateCode =1;
+
+        // turn left until camera see beacon
+//        if (false)
+//        {
+//            motorBottomRight.setPower(searchPower);
+//            motorBottomLeft.setPower(-cruisePower);
+//        }
+//        else {
+//            stateCode = 2;
+//        }
+
+		return stateCode;
 	}
 
 	int searchBeacon(){
-		int errorCode =0;
-		return errorCode;
+		int stateCode =0;
+
+        // keep the beacon in center until ODS trigger
+        //if ( sensorODS.getLightDetectedRaw() )
+
+
+		return stateCode;
 	}
 
 	int touchButton(){
@@ -190,6 +239,24 @@ public class ResQAuto extends ResQTeleOp {
 	int climbRamp(){
 		int errorCode =0;
 		return errorCode;
+	}
+
+	char getColor (float snrLimit){
+		int r = sensorRGB.red();
+		int g = sensorRGB.green();
+		int b = sensorRGB.blue();
+
+		// find the max
+		int m = Math.max(r,g);
+		m = Math.max(m,b);
+
+		// if SNR is good
+		if (m > (r+g+b)* 0.333 * snrLimit) {
+			if (m == g) return 'g';
+			if (m == r) return 'r';
+			if (m == b) return 'b';
+		}
+		return 'u';
 	}
 }
 

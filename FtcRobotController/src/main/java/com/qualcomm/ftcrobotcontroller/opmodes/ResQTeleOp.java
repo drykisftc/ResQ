@@ -69,7 +69,7 @@ public class ResQTeleOp extends OpMode {
 	// amount to change the arm servo position.
 	float scooperDelta = 0.1f;
 	float scooperPosition = 0.1f;
-    float scooperParkingPos = 0.5f;
+    float scooperParkingPos = 0.9f;
     float scooperMin = 0.1f;
     float scooperMax = 0.9f;
 
