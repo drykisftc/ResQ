@@ -31,10 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 package com.qualcomm.ftcrobotcontroller.opmodes;
 
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.OpticalDistanceSensor;
 
@@ -50,16 +46,18 @@ public class ResQAuto extends ResQTeleOp {
 
 	OpticalDistanceSensor sensorODS;
 
-	float colorSensitivity = 1.25f;
+	float colorSensitivity = 1.1f;
 
 	char targetColor = 'b';
 
 	long startTime =0;
 
 	long timeBudget = 30000; // 30 seconds
+    long lastStateTimeStamp = 0;
 
-    float cruisePower = 0.4f;
-    float searchPower = 0.25f;
+    double cruisePower = 0.4;
+    double searchPower = 0.15;
+    double turnPower = 0.25;
 
 	/**
 	 * Constructor
@@ -91,15 +89,15 @@ public class ResQAuto extends ResQTeleOp {
 
 		sensorRGB = hardwareMap.colorSensor.get("armColor");
 		sensorODS = hardwareMap.opticalDistanceSensor.get("armODS");
+        sensorRGB.enableLed(true);
+        sensorODS.enableLed(true);
 
 		state = 0;
+        telemetry.addData("STATE", ": Init done");
 	}
 
 	public void start (){
-
 		startTime = System.currentTimeMillis();
-        sensorRGB.enableLed(true);
-        sensorODS.enableLed(true);
 	}
 
 	/*
@@ -114,19 +112,18 @@ public class ResQAuto extends ResQTeleOp {
 		{
 			stop();
 		} else {
-
 			switch (state) {
 				case 0:
 					// go straight
-					state = goStraight();
+					state = goStraight(cruisePower);
 					break;
 				case 1:
 					// turn
-					state = turn();
+					state = turn(turnPower);
 					break;
 				case 2:
 					// find the beacon
-					searchBeacon();
+					searchBeacon(searchPower);
 					state = 3;
 					break;
 				case 3:
@@ -177,46 +174,74 @@ public class ResQAuto extends ResQTeleOp {
         sensorODS.enableLed(false);
 	}
 
-	int goStraight()
+	int goStraight(double power)
 	{
 		int stateCode =0;
         char color = getColor(colorSensitivity);
+        telemetry.addData("COLOR", ": " + color);
 
 		if ( color == 'b' || color == 'r' ) {
 			motorBottomRight.setPower(0);
 			motorBottomLeft.setPower(0);
+            lastStateTimeStamp = System.currentTimeMillis();
+            telemetry.addData("STATE", ": Go straight done");
 			return 1;
 		}
 		else
 		{
-			motorBottomRight.setPower(cruisePower);
-			motorBottomLeft.setPower(cruisePower);
+            telemetry.addData("STATE", ": Going Straight...");
+			if (System.currentTimeMillis() - startTime < 1000) { // first second, fast
+				motorBottomRight.setPower(power);
+				motorBottomLeft.setPower(power);
+			}
+			else {  // search slowly to prevent miss the b/r tapes
+				motorBottomRight.setPower(searchPower);
+				motorBottomLeft.setPower(searchPower);
+			}
 		}
 		return stateCode;
 	}
 
-	int turn(){
+	int turn(double power){
 		int stateCode =1;
 
         // turn left until camera see beacon
-//        if (false)
-//        {
-//            motorBottomRight.setPower(searchPower);
-//            motorBottomLeft.setPower(-cruisePower);
-//        }
-//        else {
-//            stateCode = 2;
-//        }
+        if (System.currentTimeMillis() - lastStateTimeStamp < 1000)
+        {
+            turnRight(power);
+            telemetry.addData("STATE", ": Turning...");
+        }
+        else {
+            motorBottomRight.setPower(0.0);
+            motorBottomLeft.setPower(0.0);
+            lastStateTimeStamp = System.currentTimeMillis();
+            telemetry.addData("STATE", ": Turn done");
+            stateCode = 2;
+        }
 
 		return stateCode;
 	}
 
-	int searchBeacon(){
+	int searchBeacon(double power){
 		int stateCode =0;
 
         // keep the beacon in center until ODS trigger
         //if ( sensorODS.getLightDetectedRaw() )
-
+        telemetry.addData("STATE", ": Searching beacon...");
+        telemetry.addData("ODS", "distance: " +  String.format("%d", sensorODS.getLightDetectedRaw())
+        + ", "+ String.format("%g", sensorODS.getLightDetected()));
+        if (System.currentTimeMillis() - lastStateTimeStamp < 1000)
+        {
+            motorBottomRight.setPower(power);
+            motorBottomLeft.setPower(power);
+        }
+        else {
+            motorBottomRight.setPower(0.0);
+            motorBottomLeft.setPower(0.0);
+            lastStateTimeStamp = System.currentTimeMillis();
+            telemetry.addData("STATE", ": Search beacon done");
+            stateCode = 3;
+        }
 
 		return stateCode;
 	}
@@ -246,6 +271,9 @@ public class ResQAuto extends ResQTeleOp {
 		int g = sensorRGB.green();
 		int b = sensorRGB.blue();
 
+        telemetry.addData("RGB", "r=" + String.format("%d", r) +
+                                    "g=" + String.format("%d", g) + "b=" + String.format("%d", b));
+
 		// find the max
 		int m = Math.max(r,g);
 		m = Math.max(m,b);
@@ -256,7 +284,17 @@ public class ResQAuto extends ResQTeleOp {
 			if (m == r) return 'r';
 			if (m == b) return 'b';
 		}
-		return 'u';
+		return 'u'; // unknown color
 	}
+
+    void turnLeft(double power) {
+        motorBottomRight.setPower(power);
+        motorBottomLeft.setPower(-power);
+    }
+
+    void turnRight(double power) {
+        motorBottomRight.setPower(-power);
+        motorBottomLeft.setPower(power);
+    }
 }
 
