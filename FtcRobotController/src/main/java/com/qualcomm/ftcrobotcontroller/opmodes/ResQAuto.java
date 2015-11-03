@@ -382,10 +382,13 @@ public class ResQAuto extends ResQTeleOp {
         prevTurnPower = turnPower;
     }
 
+    // 3 point interpolation, quadratic fit to maximize the intensity
     double estimateTurnPower (double maxTurnPower) {
         double p = maxTurnPower;
 
-        // 3 point interpolation, quadratic fit to maximize the intensity
+        //copy turnDataFIFO
+        //Queue<TurnData> q = turnDataFIFO.d;
+
 
         return p;
     }
