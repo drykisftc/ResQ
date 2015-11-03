@@ -33,10 +33,17 @@ package com.qualcomm.ftcrobotcontroller.opmodes;
 
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.OpticalDistanceSensor;
+import com.qualcomm.robotcore.hardware.GyroSensor;
+import java.util.Queue;
 
+class TurnData
+{
+    int intensity = -1;
+    double turnPower = 0.0;
+}
 
 /**
- * TeleOp Mode
+ * Auto Mode
  * <p>
  * Enables control of the robot via the gamepad
  */
@@ -46,18 +53,27 @@ public class ResQAuto extends ResQTeleOp {
 
 	OpticalDistanceSensor sensorODS;
 
-	float colorSensitivity = 1.1f;
+    GyroSensor sensorGyro;
 
-	char targetColor = 'b';
+	float colorSensitivity = 1.3f;
+
+	char teamColor = 'b';
 
 	long startTime =0;
 
 	long timeBudget = 30000; // 30 seconds
     long lastStateTimeStamp = 0;
 
-    double cruisePower = 0.4;
-    double searchPower = 0.15;
-    double turnPower = 0.25;
+    double cruisePower = 0.0;
+    double searchPower = 0.0;
+    double turnPower = 0.0;
+
+    int collisionDistThreshold = 5;
+    int minColorBrightness = 8;
+    TurnData prevTurnData;
+    double prevTurnPower =0.0;
+
+    Queue<TurnData> turnDataFIFO;
 
 	/**
 	 * Constructor
@@ -93,7 +109,8 @@ public class ResQAuto extends ResQTeleOp {
         sensorODS.enableLed(true);
 
 		state = 0;
-        telemetry.addData("STATE", ": Init done");
+        telemetry.addData("TEAM", "Team color:" + teamColor);
+        telemetry.addData("STATE", "state: Init done");
 	}
 
 	public void start (){
@@ -208,7 +225,13 @@ public class ResQAuto extends ResQTeleOp {
         // turn left until camera see beacon
         if (System.currentTimeMillis() - lastStateTimeStamp < 1000)
         {
-            turnRight(power);
+            if (teamColor == 'b') {
+                turnRight(power);
+            }
+            else
+            {
+                turnLeft(power);
+            }
             telemetry.addData("STATE", ": Turning...");
         }
         else {
@@ -228,9 +251,8 @@ public class ResQAuto extends ResQTeleOp {
         // keep the beacon in center until ODS trigger
         //if ( sensorODS.getLightDetectedRaw() )
         telemetry.addData("STATE", ": Searching beacon...");
-        telemetry.addData("ODS", "distance: " +  String.format("%d", sensorODS.getLightDetectedRaw())
-        + ", "+ String.format("%g", sensorODS.getLightDetected()));
-        if (System.currentTimeMillis() - lastStateTimeStamp < 1000)
+        int distance = sensorODS.getLightDetectedRaw();
+        if (distance < collisionDistThreshold)
         {
             motorBottomRight.setPower(power);
             motorBottomLeft.setPower(power);
@@ -242,7 +264,7 @@ public class ResQAuto extends ResQTeleOp {
             telemetry.addData("STATE", ": Search beacon done");
             stateCode = 3;
         }
-
+        telemetry.addData("ODS", "distance: " +  String.format("%d", distance));
 		return stateCode;
 	}
 
@@ -272,14 +294,16 @@ public class ResQAuto extends ResQTeleOp {
 		int b = sensorRGB.blue();
 
         telemetry.addData("RGB", "r=" + String.format("%d", r) +
-                                    "g=" + String.format("%d", g) + "b=" + String.format("%d", b));
+                "g=" + String.format("%d", g) +
+                "b=" + String.format("%d", b));
 
 		// find the max
 		int m = Math.max(r,g);
 		m = Math.max(m,b);
+        int sum = r+g+b;
 
 		// if SNR is good
-		if (m > (r+g+b)* 0.333 * snrLimit) {
+		if (sum > minColorBrightness && m > sum* 0.333 * snrLimit) {
 			if (m == g) return 'g';
 			if (m == r) return 'r';
 			if (m == b) return 'b';
@@ -295,6 +319,75 @@ public class ResQAuto extends ResQTeleOp {
     void turnRight(double power) {
         motorBottomRight.setPower(-power);
         motorBottomLeft.setPower(power);
+    }
+
+    int getColorIntensity (char color)
+    {
+        int intensity =0;
+        switch (color){
+            case 'r':
+                intensity = sensorRGB.red();
+                break;
+            case 'b':
+                intensity = sensorRGB.blue();
+                break;
+            case 'g':
+                intensity = sensorRGB.green();
+                break;
+            case 'w':
+                intensity = sensorRGB.red()+sensorRGB.green()+sensorRGB.blue();
+                break;
+            default:
+                break;
+        }
+        return intensity;
+    }
+
+    void followColor (char color,
+                     double powerForward, double maxPowerTurn,
+                     int intensityThreshold, int intensityDeltaThreshold){
+
+        int intensity = getColorIntensity(color);
+
+        // totally lost, make circles until find the line again
+        if (intensity < intensityThreshold)
+        {
+            turnDataFIFO.clear();
+            motorBottomRight.setPower(maxPowerTurn);
+            motorBottomLeft.setPower(-maxPowerTurn);
+            return;
+        }
+
+        // adjust turn power
+        double powerTurn = 0.0;
+        if (prevTurnData.intensity >0) {
+
+            int colorDelta = intensity - prevTurnData.intensity;
+            if (Math.abs(colorDelta) > intensityDeltaThreshold) {
+                powerTurn = estimateTurnPower(maxPowerTurn);
+            }
+        }
+
+        // adjust motor power
+        motorBottomRight.setPower(powerForward + powerTurn);
+        motorBottomLeft.setPower(powerForward - powerTurn);
+
+        // log history
+        prevTurnData.intensity = intensity;
+        prevTurnData.turnPower = prevTurnPower;
+        if (turnDataFIFO.size() >=3) {
+            turnDataFIFO.remove();
+        }
+        turnDataFIFO.offer(prevTurnData);
+        prevTurnPower = turnPower;
+    }
+
+    double estimateTurnPower (double maxTurnPower) {
+        double p = maxTurnPower;
+
+        // 3 point interpolation, quadratic fit to maximize the intensity
+
+        return p;
     }
 }
 
