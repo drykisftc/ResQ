@@ -68,7 +68,7 @@ public class ResQAuto extends ResQTeleOp {
     OpticalDistanceSensor sensorODS;
 
     I2cDevice sensorGyro;
-    I2cDeviceReader headingReader;
+    GyroReader headingReader;
 
     float colorSensitivity = 1.3f;
 
@@ -79,9 +79,9 @@ public class ResQAuto extends ResQTeleOp {
     long timeBudget = 30000; // 30 seconds
     long lastStateTimeStamp = 0;
 
-    double cruisePower = 0.0;
-    double searchPower = 0.0;
-    double turnPower = 0.0;
+    double cruisePower = 0.3;
+    double searchPower = 0.2;
+    double turnPower = 0.15;
 
     int collisionDistThreshold = 5;
     int minColorBrightness = 8;
@@ -139,20 +139,29 @@ public class ResQAuto extends ResQTeleOp {
         sensorODS.enableLed(true);
         sensorGyro = hardwareMap.i2cDevice.get("headGYRO");
         //The Integrating Gyro I2C address is 0x20, heading is 0x04, 2 bytes (lsb:msb)
-        headingReader = new I2cDeviceReader(sensorGyro, 0x20, 0x04, 2);
+        headingReader = new GyroReader(sensorGyro, 0x20, 0x04, 2);
 
         state = 0;
         telemetry.addData("TEAM", "Team color:" + teamColor);
         telemetry.addData("STATE", "state: Init done");
+        currentGyro = getGyroHeading();
+        //upateRotationData();
+        //currentGyro = heading;
+        telemetry.addData("GYRO", "GYRO: " + String.format("%03d", refGyro)
+                + " ," + String.format("%03d", currentGyro)
+                + " ," + String.format("%03d", xRotation)
+                + " ," + String.format("%03d", yRotation)
+                + " ," + String.format("%03d", zRotation));
+
     }
 
     public void start() {
         sensorRGB.enableLed(true);
         sensorODS.enableLed(true);
         startTime = System.currentTimeMillis();
-        //currentGyro = getGyroHeading();
-        upateRotationData();
-        currentGyro = heading;
+        currentGyro = getGyroHeading();
+        //upateRotationData();
+        //currentGyro = heading;
         refGyro = currentGyro;
         prevGyro = currentGyro;
         refXRotation = xRotation;
@@ -175,9 +184,9 @@ public class ResQAuto extends ResQTeleOp {
             stop();
         } else {
             prevGyro = currentGyro;
-            //currentGyro = getGyroHeading();
-            upateRotationData();
-            currentGyro = heading;
+            currentGyro = getGyroHeading();
+            //upateRotationData();
+            //currentGyro = heading;
             telemetry.addData("GYRO", "GYRO: " + String.format("%03d", refGyro)
                     + " ," + String.format("%03d", currentGyro)
                     + " ," + String.format("%03d", xRotation)
@@ -467,9 +476,14 @@ public class ResQAuto extends ResQTeleOp {
     }
 
     void maintainAngle(double target, double current, double power) {
-        double turnPower = getDeltaPowerByAngle(current - target);
-        motorBottomRight.setPower(power + turnPower);
-        motorBottomLeft.setPower(power - turnPower);
+        double turn = getDeltaPowerByAngle(current - target);
+        double left = power + turn;
+        double right = power - turn;
+        motorBottomRight.setPower(left);
+        motorBottomLeft.setPower(right);
+        telemetry.addData("WHEEL", "left pwr" + String.format("%.2g", left) +
+                "right pwr" + String.format("%.2g", right) +
+                "turn pwr=" + String.format("%.2g", turn));
     }
 
     /**
@@ -494,7 +508,11 @@ public class ResQAuto extends ResQTeleOp {
         zRotation = data[12] | (data[13]<<8);
     }
 
-    double getGyroHeading() {
+    int getGyroHeading() {
+        while(!headingReader.isDone())
+        {
+
+        }
         byte[] h = headingReader.getReadBuffer(); //0x04/0x05 Heading Data (lsb:msb)
         return h[0] | (h[1]<<8);
     }
