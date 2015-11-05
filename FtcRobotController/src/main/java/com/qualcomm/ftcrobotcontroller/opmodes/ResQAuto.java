@@ -31,15 +31,28 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 package com.qualcomm.ftcrobotcontroller.opmodes;
 
+import android.renderscript.Element;
+
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.OpticalDistanceSensor;
 import com.qualcomm.robotcore.hardware.GyroSensor;
 import java.util.Queue;
+import java.util.Vector;
+import java.util.Collections;
 
-class TurnData
+class TurnData implements Comparable<TurnData>
 {
     int intensity = -1;
     double turnPower = 0.0;
+    double gyroPos = 0.0;
+
+    public int compareTo (TurnData a)
+    {
+        if (turnPower > a.turnPower)
+            return 1;
+        else
+            return 0;
+    }
 }
 
 /**
@@ -72,6 +85,12 @@ public class ResQAuto extends ResQTeleOp {
     int minColorBrightness = 8;
     TurnData prevTurnData;
     double prevTurnPower =0.0;
+    double refGyro=0.0;
+    double prevGyro= 0.0;
+    double currentGyro = 0.0;
+    double targetAngle =0.0;
+    double targetAngleTolerance = 2.0;
+    float[] angle2PowerLUT = { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f};
 
     Queue<TurnData> turnDataFIFO;
 
@@ -108,13 +127,23 @@ public class ResQAuto extends ResQTeleOp {
         sensorRGB.enableLed(true);
         sensorODS.enableLed(true);
 
+        sensorGyro = hardwareMap.gyroSensor.get("headGyro");
+
 		state = 0;
         telemetry.addData("TEAM", "Team color:" + teamColor);
         telemetry.addData("STATE", "state: Init done");
 	}
 
 	public void start (){
+        sensorRGB.enableLed(true);
+        sensorODS.enableLed(true);
 		startTime = System.currentTimeMillis();
+        currentGyro = sensorGyro.getRotation();
+        refGyro = currentGyro;
+        prevGyro = currentGyro;
+
+        // set the next state
+        targetAngle = currentGyro;
 	}
 
 	/*
@@ -129,6 +158,10 @@ public class ResQAuto extends ResQTeleOp {
 		{
 			stop();
 		} else {
+            prevGyro = currentGyro;
+            currentGyro = sensorGyro.getRotation();
+            telemetry.addData("GYRO", "GYRO: " +  String.format("%.2g",refGyro) + " + " +
+                    String.format("%.2g",currentGyro));
 			switch (state) {
 				case 0:
 					// go straight
@@ -139,42 +172,31 @@ public class ResQAuto extends ResQTeleOp {
 					state = turn(turnPower);
 					break;
 				case 2:
+                    state = moveToBeacon(cruisePower);
+                    break;
+                case 3:
 					// find the beacon
-					searchBeacon(searchPower);
-					state = 3;
+					state = searchBeacon(searchPower);
 					break;
-				case 3:
+				case 4:
 					// touch the button
 					touchButton();
 					break;
-				case 4:
+				case 5:
 					// backup
 					backup();
 					break;
-				case 5:
+				case 6:
 					// find the ramp with correct color
 					findRamp();
 					break;
-				case 6:
+				case 7:
 					// climb up the ramp
 					climbRamp();
 				default:
 					// error
 
 			}
-			// go straight
-
-			// turn
-
-			// find the beacon
-
-			// touch the button
-
-			// backup
-
-			// find the rampe with correct color
-
-			// climb up the ramp
 		}
 
 	}
@@ -198,22 +220,28 @@ public class ResQAuto extends ResQTeleOp {
         telemetry.addData("COLOR", ": " + color);
 
 		if ( color == 'b' || color == 'r' ) {
+            // stop at the center blue/red line
 			motorBottomRight.setPower(0);
 			motorBottomLeft.setPower(0);
             lastStateTimeStamp = System.currentTimeMillis();
-            telemetry.addData("STATE", ": Go straight done");
+            // set the next state
+            if (teamColor == 'b') {
+                telemetry.addData("STATE", ": Turning right...");
+                targetAngle = currentGyro-90.0;
+            }
+            else
+            {
+                telemetry.addData("STATE", ": Turning left...");
+                targetAngle = currentGyro+90.0;
+            }
 			return 1;
-		}
-		else
-		{
+		} else {
             telemetry.addData("STATE", ": Going Straight...");
 			if (System.currentTimeMillis() - startTime < 1000) { // first second, fast
-				motorBottomRight.setPower(power);
-				motorBottomLeft.setPower(power);
+                maintainAngle(targetAngle, currentGyro, power);
 			}
 			else {  // search slowly to prevent miss the b/r tapes
-				motorBottomRight.setPower(searchPower);
-				motorBottomLeft.setPower(searchPower);
+                maintainAngle(targetAngle, currentGyro, searchPower);
 			}
 		}
 		return stateCode;
@@ -222,51 +250,66 @@ public class ResQAuto extends ResQTeleOp {
 	int turn(double power){
 		int stateCode =1;
 
-        // turn left until camera see beacon
-        if (System.currentTimeMillis() - lastStateTimeStamp < 1000)
-        {
-            if (teamColor == 'b') {
-                turnRight(power);
-            }
-            else
-            {
-                turnLeft(power);
-            }
-            telemetry.addData("STATE", ": Turning...");
-        }
-        else {
+        // TODO: turn 90 degree until camera see beacon
+        if ( Math.abs(currentGyro - targetAngle)  < targetAngleTolerance ){
             motorBottomRight.setPower(0.0);
             motorBottomLeft.setPower(0.0);
             lastStateTimeStamp = System.currentTimeMillis();
             telemetry.addData("STATE", ": Turn done");
             stateCode = 2;
         }
+        else {
+            maintainAngle(targetAngle, currentGyro, 0.0);
+            if (teamColor == 'b') {
+                telemetry.addData("STATE", ": Turning right...");
+            }
+            else {
+                telemetry.addData("STATE", ": Turning left...");
+            }
+        }
 
 		return stateCode;
 	}
 
-	int searchBeacon(double power){
-		int stateCode =0;
+	int moveToBeacon(double power){
+		int stateCode = 2;
 
         // keep the beacon in center until ODS trigger
         //if ( sensorODS.getLightDetectedRaw() )
-        telemetry.addData("STATE", ": Searching beacon...");
         int distance = sensorODS.getLightDetectedRaw();
-        if (distance < collisionDistThreshold)
+        char color = getColor(colorSensitivity);
+        telemetry.addData("STATE",
+                ": Move toward beacon...distance "
+                        + String.format("%03d",distance) + " Color: " + color);
+        if (distance < collisionDistThreshold && color != teamColor)
         {
-            motorBottomRight.setPower(power);
-            motorBottomLeft.setPower(power);
+            if (System.currentTimeMillis() - lastStateTimeStamp < 1000) {
+                maintainAngle(targetAngle, currentGyro, power);
+            }
+            else {
+                maintainAngle(targetAngle, currentGyro, searchPower);
+            }
         }
         else {
             motorBottomRight.setPower(0.0);
             motorBottomLeft.setPower(0.0);
             lastStateTimeStamp = System.currentTimeMillis();
-            telemetry.addData("STATE", ": Search beacon done");
+            telemetry.addData("STATE", ": Move to beacon done");
             stateCode = 3;
         }
-        telemetry.addData("ODS", "distance: " +  String.format("%d", distance));
+
 		return stateCode;
 	}
+
+    int searchBeacon(double power) {
+        int stateCode = 0;
+
+        // following color lines, searching for the white line
+
+
+
+        return stateCode;
+    }
 
 	int touchButton(){
 		int errorCode =0;
@@ -382,15 +425,47 @@ public class ResQAuto extends ResQTeleOp {
         prevTurnPower = turnPower;
     }
 
-    // 3 point interpolation, quadratic fit to maximize the intensity
     double estimateTurnPower (double maxTurnPower) {
         double p = maxTurnPower;
 
         //copy turnDataFIFO
-        //Queue<TurnData> q = turnDataFIFO.d;
+        Vector<TurnData> v = new Vector<TurnData>(turnDataFIFO.size());
+        for (TurnData q : turnDataFIFO) {
+            v.add(q);
+        }
+
+        // add up deltaPower
+        for (int i=1; i < v.size(); i++) {
+            v.elementAt(i).turnPower += v.elementAt(i-1).turnPower;
+        }
+
+        // sort power
+        Collections.sort(v);
+
+        //  3 point interpolation, quadratic fit to maximize the intensity
 
 
         return p;
+    }
+
+    double getDeltaPowerByAngle ( double angle)
+    {
+        double delta = angle - targetAngle;
+        if ( Math.abs(delta) < targetAngleTolerance)
+        {
+            return 0.0f;
+        }
+        else
+        {
+            return ResQUtils.lookUpTableFunc((float)angle*0.01f, angle2PowerLUT);
+        }
+    }
+
+    void maintainAngle(double target, double current, double power)
+    {
+        double turnPower = getDeltaPowerByAngle(current-target);
+        motorBottomRight.setPower(power+turnPower);
+        motorBottomLeft.setPower(power-turnPower);
     }
 }
 
