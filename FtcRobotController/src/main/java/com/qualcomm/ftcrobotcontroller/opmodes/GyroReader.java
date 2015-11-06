@@ -4,7 +4,7 @@ import com.qualcomm.robotcore.hardware.I2cDevice;
 import com.qualcomm.robotcore.hardware.I2cController;
 
 /**
- * Created by hfu on 11/4/15.
+ * Created by hfu on 11/4/15. Not thread safe. Must read buffer once then delete this
  */
 public class GyroReader {
 

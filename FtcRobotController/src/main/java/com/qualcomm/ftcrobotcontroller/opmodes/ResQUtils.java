@@ -6,7 +6,7 @@ package com.qualcomm.ftcrobotcontroller.opmodes;
 public class ResQUtils {
 
     static float lookUpTableFunc (float dVal, float[] scaleArray ) {
-        int size = scaleArray.length;
+        int size = scaleArray.length-1;
         // get the corresponding index for the scaleInput array.
         int index = (int) (dVal * size);
 
