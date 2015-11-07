@@ -236,7 +236,9 @@ public class ResQAuto extends ResQTeleOp {
                 case 7:
                     // climb up the ramp
                     climbRamp();
+                    break;
                 default:
+                    stop();
                     // error
 
             }
@@ -336,31 +338,35 @@ public class ResQAuto extends ResQTeleOp {
     }
 
     int searchBeacon(double power) {
-        int stateCode = 0;
+        int stateCode = 3;
 
         // following color lines, searching for the white line
-
+        stateCode = 4;
 
         return stateCode;
     }
 
     int touchButton() {
-        int errorCode = 0;
-        return errorCode;
+        int stateCode = 4;
+        stateCode = 5;
+        return stateCode;
     }
 
     int backup() {
-        int errorCode = 0;
+        int errorCode = 5;
+        errorCode = 6;
         return errorCode;
     }
 
     int findRamp() {
-        int errorCode = 0;
+        int errorCode = 6;
+        errorCode = 7;
         return errorCode;
     }
 
     int climbRamp() {
-        int errorCode = 0;
+        int errorCode = 7;
+        errorCode = 8;
         return errorCode;
     }
 
