@@ -48,3 +48,39 @@ public class GyroReader {
     }
 }
 
+/**
+ //        I2C Registers
+ //        0x00 Sensor Firmware Revision
+ //        0x01 Manufacturer Code
+ //        0x02 Sensor ID Code
+ //        0x03 Command
+ //        0x04/0x05 Heading Data (lsb:msb)
+ //        0x06/0x07 Integrated Z Value (lsb:msb)
+ //        0x08/0x09 Raw X Value (lsb:msb)
+ //        0x0A/0x0B Raw Y Value (lsb:msb)
+ //        0x0C/0x0D Raw Z Value (lsb:msb)
+ //        0x0E/0x0F Z Axis Offset (lsb:msb)
+ //        0x10/0x11 Z Axis Scaling Coefficient (lsb:msb)
+ */
+//    void upateRotationData() {
+//        //The Integrating Gyro I2C address is 0x20
+//        GyroReader headingReader = new GyroReader(sensorGyro, 0x20, 0x00, 18);
+//        while(!headingReader.isDone())
+//        {
+//        }
+//        byte[] data = headingReader.getReadBuffer();
+//        heading = data[4] | (data[5]<<8);
+//        xRotation = data[8] | (data[9]<<8);
+//        yRotation = data[10] | (data[11]<<8);
+//        zRotation = data[12] | (data[13]<<8);
+//    }
+
+//    int getGyroHeading() {
+//        //The Integrating Gyro I2C address is 0x20, heading is 0x04, 2 bytes (lsb:msb)
+//        GyroReader headingReader = new GyroReader(sensorGyro, 0x20, 0x04, 2);
+//        while(!headingReader.isDone())
+//        {
+//        }
+//        byte[] h = headingReader.getReadBuffer(); //0x04/0x05 Heading Data (lsb:msb)
+//        return h[0] | (h[1]<<8);
+//    }
