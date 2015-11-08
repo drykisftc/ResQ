@@ -80,6 +80,19 @@ public class ResQTeleOp extends OpMode {
 
 	Servo scooper;
 
+	float[] wheelPowerLUT = {0.0f, 0.05f, 0.15f, 0.18f, 0.20f,
+			0.22f, 0.24f, 0.26f, 0.28f, 0.30f, 0.32f, 0.34f, 0.36f,
+			0.38f, 0.42f, 0.46f, 0.50f, 0.54f, 0.58f, 0.62f, 0.66f,
+			0.70f, 0.74f, 0.78f, 0.82f, 0.86f, 0.90f, 0.94f, 0.98f, 1.00f };
+
+	float[] armPowerLUT = { 0.0f, 0.01f, 0.02f, 0.03f, 0.04f, 0.05f, 0.06f, 0.07f,
+			0.08f, 0.09f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f,
+			0.17f, 0.18f, 0.19f, 0.20f, 0.21f, 0.22f, 0.23f, 0.24f,
+			0.25f, 0.26f, 0.27f, 0.28f, 0.29f, 0.30f, 0.31f, 0.32f,
+			0.33f, 0.34f, 0.35f, 0.36f, 0.37f, 0.38f, 0.39f, 0.40f,
+			0.41f, 0.42f, 0.43f, 0.44f, 0.45f, 0.46f, 0.47f, 0.48f,
+			0.49f, 0.50f, 0.51f, 0.52f, 0.53f, 0.54f, 0.55f, 0.56f,
+			0.60f, 0.65f, 0.70f, 0.75f, 0.80f, 0.85f, 0.90f, 0.95f, 1.0f };
 	/**
 	 * Constructor
 	 */
@@ -158,8 +171,8 @@ public class ResQTeleOp extends OpMode {
 
 		// scale the joystick value to make it easier to control
 		// the robot more precisely at slower speeds.
-		right = scaleInput(right);
-		left =  scaleInput(left);
+		right = ResQUtils.lookUpTableFunc(right, wheelPowerLUT);
+		left =  ResQUtils.lookUpTableFunc(left, wheelPowerLUT);
 
         // move wheels
         motorBottomRight.setPower(right);
@@ -198,7 +211,7 @@ public class ResQTeleOp extends OpMode {
 			} else {
 				leftArm = Range.clip(leftArm, -1, 1);
 				//int leftArmCurrent = moveLeftArmDeltaPosition(leftArm, armMaxDelta);
-				leftArm = scaleInputArm(leftArm) * leftArmPowerScale;
+				leftArm = ResQUtils.lookUpTableFunc(leftArm, armPowerLUT) * leftArmPowerScale;
 				leftArmLastPos = moveLeftArm(leftArm);
                 telemetry.addData("left ARM ",
                         "pwr: " + String.format("%.2f", leftArm)
@@ -210,7 +223,7 @@ public class ResQTeleOp extends OpMode {
 			} else {
 				rightArm = Range.clip(rightArm, -1, 1);
 				//int rightArmCurrent = moveRightArmDeltaPosition(rightArm, armMaxDelta);
-				rightArm = (float) scaleInputArm(rightArm) * rightArmPowerScale;
+				rightArm = ResQUtils.lookUpTableFunc(rightArm, armPowerLUT) * rightArmPowerScale;
 				rightArmLastPos = moveRightArm(rightArm);
                 telemetry.addData("right ARM ",
                         "pwr: " + String.format("%.2f", rightArm)
@@ -244,117 +257,6 @@ public class ResQTeleOp extends OpMode {
         moveRightArm(0.0f);
         scooper.setPosition(scooperParkingPos);
 	}
-
-	/*
-	 * This method scales the joystick input so for low joystick values, the
-	 * scaled value is less than linear.  This is to make it easier to drive
-	 * the robot more precisely at slower speeds.
-	 */
-	float scaleInputArm(float dVal)  {
-		float[] scaleArray = { 0.0f, 0.01f, 0.02f, 0.03f, 0.04f, 0.05f, 0.06f, 0.07f,
-				0.08f, 0.09f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f,
-				0.17f, 0.18f, 0.19f, 0.20f, 0.21f, 0.22f, 0.23f, 0.24f,
-				0.25f, 0.26f, 0.27f, 0.28f, 0.29f, 0.30f, 0.31f, 0.32f,
-				0.33f, 0.34f, 0.35f, 0.36f, 0.37f, 0.38f, 0.39f, 0.40f,
-				0.41f, 0.42f, 0.43f, 0.44f, 0.45f, 0.46f, 0.47f, 0.48f,
-				0.49f, 0.50f, 0.51f, 0.52f, 0.53f, 0.54f, 0.55f, 0.56f,
-				0.60f, 0.65f, 0.70f, 0.75f, 0.80f, 0.85f, 0.90f, 0.95f, 1.0f };
-
-		// get the corresponding index for the scaleInput array.
-		int index = (int) (dVal * 64.0);
-
-		// index should be positive.
-		if (index < 0) {
-			index = -index;
-		}
-
-		// index cannot exceed size of array minus 1.
-		if (index > 64) {
-			index = 64;
-		}
-
-		// get value from the array.
-		float dScale = 0.0f;
-		if (dVal < 0) {
-			dScale = -scaleArray[index];
-		} else {
-			dScale = scaleArray[index];
-		}
-
-		// return scaled value.
-		return dScale;
-	}
-
-	/*
-	 * This method scales the joystick input so for low joystick values, the
-	 * scaled value is less than linear.  This is to make it easier to drive
-	 * the robot more precisely at slower speeds.
-	 */
-	float scaleInput(float dVal)  {
-		float[] scaleArray = { 0.0f, 0.05f, 0.09f, 0.10f, 0.12f, 0.15f, 0.18f, 0.20f,
-				0.22f, 0.24f, 0.26f, 0.28f, 0.30f, 0.32f, 0.34f, 0.36f,
-				0.38f, 0.42f, 0.46f, 0.50f, 0.54f, 0.58f, 0.62f, 0.66f,
-				0.70f, 0.74f, 0.78f, 0.82f, 0.86f, 0.90f, 0.94f, 0.98f, 1.00f };
-
-		// get the corresponding index for the scaleInput array.
-		int index = (int) (dVal * 32.0);
-
-		// index should be positive.
-		if (index < 0) {
-			index = -index;
-		}
-
-		// index cannot exceed size of array minus 1.
-		if (index > 32) {
-			index = 32;
-		}
-
-		// get value from the array.
-		float dScale = 0.0f;
-		if (dVal < 0) {
-			dScale = -scaleArray[index];
-		} else {
-			dScale = scaleArray[index];
-		}
-
-		// return scaled value.
-		return dScale;
-	}
-
-    int scaleInputArmPositionDelta(float dVal, int maxDelta)  {
-        float[] scaleArray = { 0.0f, 0.01f, 0.02f, 0.03f, 0.04f, 0.05f, 0.06f, 0.07f,
-                0.08f, 0.09f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f,
-                0.17f, 0.18f, 0.19f, 0.20f, 0.21f, 0.22f, 0.23f, 0.24f,
-                0.25f, 0.26f, 0.27f, 0.28f, 0.29f, 0.30f, 0.31f, 0.32f,
-                0.33f, 0.34f, 0.35f, 0.36f, 0.37f, 0.38f, 0.39f, 0.40f,
-                0.42f, 0.44f, 0.46f, 0.48f, 0.5f, 0.52f, 0.54f, 0.56f,
-                0.58f, 0.60f, 0.62f, 0.64f, 0.66f, 0.68f, 0.70f, 0.72f,
-                0.75f, 0.80f, 0.83f, 0.86f, 0.89f, 0.92f, 0.95f, 0.98f, 1.0f };
-
-        // get the corresponding index for the scaleInput array.
-        int index = (int) (dVal * 64.0);
-
-        // index should be positive.
-        if (index < 0) {
-            index = -index;
-        }
-
-        // index cannot exceed size of array minus 1.
-        if (index > 64) {
-            index = 64;
-        }
-
-        // get value from the array.
-        float dScale = 0.0f;
-        if (dVal < 0) {
-            dScale = -scaleArray[index];
-        } else {
-            dScale = scaleArray[index];
-        }
-
-        // return scaled value.
-        return (int)dScale*maxDelta;
-    }
 
 	int moveLeftArm(float leftArmPower)
 	{
@@ -413,31 +315,31 @@ public class ResQTeleOp extends OpMode {
         motorTopRight.setTargetPosition(rightArmLastPos);
     }
 
-    int moveLeftArmDeltaPosition(float delta, int maxDelta)
-    {
-        int armCurrent = motorTopLeft.getCurrentPosition();
-        int nextPosition = scaleInputArmPositionDelta(delta, maxDelta) + armCurrent;
-        if (nextPosition > leftArmUpperLimit && nextPosition < leftArmLowerLimit ) {
-            motorTopLeft.setTargetPosition(nextPosition);
-            leftArmLastReqPos = nextPosition;
-        }
-        else {
-            moveLeftArm(delta);
-        }
-        return armCurrent;
-    }
-
-    int moveRightArmDeltaPosition(float delta, int maxDelta)
-    {
-        int rightArmCurrent = motorTopRight.getCurrentPosition();
-        int nextPosition = scaleInputArmPositionDelta(delta, maxDelta) + rightArmCurrent;
-        if (nextPosition > rightArmUpperLimit && nextPosition < rightArmLowerLimit ) {
-            motorTopRight.setTargetPosition(nextPosition);
-            rightArmLastReqPos = nextPosition;
-        }
-        else {
-            moveRightArm(delta);
-        }
-        return rightArmCurrent;
-    }
+//    int moveLeftArmDeltaPosition(float delta, int maxDelta)
+//    {
+//        int armCurrent = motorTopLeft.getCurrentPosition();
+//        int nextPosition = scaleInputArmPositionDelta(delta, maxDelta) + armCurrent;
+//        if (nextPosition > leftArmUpperLimit && nextPosition < leftArmLowerLimit ) {
+//            motorTopLeft.setTargetPosition(nextPosition);
+//            leftArmLastReqPos = nextPosition;
+//        }
+//        else {
+//            moveLeftArm(delta);
+//        }
+//        return armCurrent;
+//    }
+//
+//    int moveRightArmDeltaPosition(float delta, int maxDelta)
+//    {
+//        int rightArmCurrent = motorTopRight.getCurrentPosition();
+//        int nextPosition = scaleInputArmPositionDelta(delta, maxDelta) + rightArmCurrent;
+//        if (nextPosition > rightArmUpperLimit && nextPosition < rightArmLowerLimit ) {
+//            motorTopRight.setTargetPosition(nextPosition);
+//            rightArmLastReqPos = nextPosition;
+//        }
+//        else {
+//            moveRightArm(delta);
+//        }
+//        return rightArmCurrent;
+//    }
 }
