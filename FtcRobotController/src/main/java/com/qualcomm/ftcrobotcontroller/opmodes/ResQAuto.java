@@ -66,7 +66,8 @@ public class ResQAuto extends ResQTeleOp {
 
     ColorSensor sensorRGB;
 
-    OpticalDistanceSensor sensorODS;
+    OpticalDistanceSensor sensorODSLeft;
+    OpticalDistanceSensor sensorODSRight;
 
     GyroSensor sensorGyro;
 
@@ -83,8 +84,8 @@ public class ResQAuto extends ResQTeleOp {
     double searchPower = 0.25;
     double turnPower = 0.2;
 
-    int collisionDistThreshold = 5;
-    int minColorBrightness = 8;
+    int collisionDistThreshold = 20;
+    int minColorBrightness = 10;
     TurnData prevTurnData;
     double prevTurnPower = 0.0;
 
@@ -92,7 +93,7 @@ public class ResQAuto extends ResQTeleOp {
     int prevGyro = 0;
     int currentGyro = 0;
     int targetAngle = 0;
-    int targetAngleTolerance = 2;
+    int targetAngleTolerance = 1;
     float[] angle2PowerLUT = {0.2f, 0.2f, 0.25f, 0.3f, 0.35f, 0.4f, 0.5f};
 
     int heading = 0;
@@ -133,10 +134,15 @@ public class ResQAuto extends ResQTeleOp {
 
         super.init();
 
+
+        sensorODSLeft = hardwareMap.opticalDistanceSensor.get("leftODS");
+        sensorODSLeft.enableLed(true);
+        sensorODSRight = hardwareMap.opticalDistanceSensor.get("rightODS");
+        sensorODSRight.enableLed(true);
+
         sensorRGB = hardwareMap.colorSensor.get("armColor");
-        sensorODS = hardwareMap.opticalDistanceSensor.get("armODS");
         sensorRGB.enableLed(true);
-        sensorODS.enableLed(true);
+
         sensorGyro = hardwareMap.gyroSensor.get("headGYRO");
         sensorGyro.calibrate();
 
@@ -162,11 +168,14 @@ public class ResQAuto extends ResQTeleOp {
                 + " ," + String.format("%03d", yRotation)
                 + " ," + String.format("%03d", zRotation)+")");
 
+        sensorRGB.enableLed(true);
+
+        sensorODSLeft.enableLed(true);
+        sensorODSRight.enableLed(true);
+
     }
 
     public void start() {
-        sensorRGB.enableLed(true);
-        sensorODS.enableLed(true);
 
         //currentGyro = getGyroHeading();
         //upateRotationData();
@@ -255,7 +264,8 @@ public class ResQAuto extends ResQTeleOp {
     public void stop() {
         super.stop();
         sensorRGB.enableLed(false);
-        sensorODS.enableLed(false);
+        sensorODSLeft.enableLed(false);
+        sensorODSLeft.enableLed(false);
     }
 
     int goStraight(double power) {
@@ -315,12 +325,17 @@ public class ResQAuto extends ResQTeleOp {
 
         // keep the beacon in center until ODS trigger
         //if ( sensorODS.getLightDetectedRaw() )
-        int distance = sensorODS.getLightDetectedRaw();
+        int distanceLeft = sensorODSLeft.getLightDetectedRaw();
+        int distanceRight = sensorODSLeft.getLightDetectedRaw();
         char color = getColor(colorSensitivity);
         telemetry.addData("STATE",
-                ": Move toward beacon...distance "
-                        + String.format("%03d", distance) + " Color: " + color);
-        if (distance < collisionDistThreshold && color != teamColor) {
+                ": Move toward beacon...distance ("
+                        + String.format("%03d", distanceLeft)+ ", "
+                        + String.format("%03d", distanceRight) + ") "
+                        + " Color: " + color);
+        if (distanceLeft < collisionDistThreshold
+                && distanceRight < collisionDistThreshold
+                && color != teamColor) {
             if (System.currentTimeMillis() - lastStateTimeStamp < 1000) {
                 maintainAngle(targetAngle, currentGyro, power);
             } else {
