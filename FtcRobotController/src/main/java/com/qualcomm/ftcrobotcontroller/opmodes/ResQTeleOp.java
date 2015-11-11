@@ -113,7 +113,7 @@ public class ResQTeleOp extends OpMode {
 		leftArmUnloadPosition = leftArmLoadPosition;
 		leftArmLowerLimit = leftArmLastPos + 5000;
 		leftArmLastPower = 0.0f;
-		leftArmPowerScale = 0.5f;
+		leftArmPowerScale = 0.6f;
 
 		rightArmLastPos = motorTopRight.getCurrentPosition();
         rightArmLastReqPos = rightArmLastPos;
@@ -220,9 +220,9 @@ public class ResQTeleOp extends OpMode {
 
 		// update the position of the arm.
 		if (gamepad1.x) {
-            scooper.setPosition(scooperMax);
-		} else {
             scooper.setPosition(scooperMin);
+		} else {
+            scooper.setPosition(scooperMax);
 		}
 
         // logging
