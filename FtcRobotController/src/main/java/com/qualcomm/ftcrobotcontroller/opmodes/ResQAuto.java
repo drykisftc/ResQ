@@ -71,7 +71,7 @@ public class ResQAuto extends ResQTeleOp {
 
     GyroSensor sensorGyro;
 
-    float colorSensitivity = 1.3f;
+    float colorSensitivity = 1.2f;
 
     char teamColor = 'b';
 
@@ -80,9 +80,9 @@ public class ResQAuto extends ResQTeleOp {
     long timeBudget = 30000; // 30 seconds
     long lastStateTimeStamp = 0;
 
-    double cruisePower = 0.35;
-    double searchPower = 0.2;
-    double turnPower = 0.1;
+    double cruisePower = 0.3;
+    double searchPower = 0.25;
+    double turnPower = 0.2;
 
     int collisionDistThreshold = 20;
     int minColorBrightness = 2;
@@ -400,7 +400,7 @@ public class ResQAuto extends ResQTeleOp {
         int sum = r + g + b;
 
         // if SNR is good
-        if (sum >= minColorBrightness && m > sum * 0.333 * snrLimit) {
+        if (sum > minColorBrightness && m > sum * 0.333 * snrLimit) {
             if (m == g) return 'g';
             if (m == r) return 'r';
             if (m == b) return 'b';
