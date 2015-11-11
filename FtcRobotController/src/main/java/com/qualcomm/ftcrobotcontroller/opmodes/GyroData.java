@@ -8,6 +8,7 @@ public class GyroData {
     int xRotation=0;
     int yRotation=0;
     int zRotation=0;
+
     public GyroData (int h, int x, int y, int z)
     {
         heading = h;

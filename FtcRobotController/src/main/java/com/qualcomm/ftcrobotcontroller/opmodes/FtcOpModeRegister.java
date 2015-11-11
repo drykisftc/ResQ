@@ -63,6 +63,7 @@ public class FtcOpModeRegister implements OpModeRegister {
     manager.register("ResQAutoHelper", ResQAutoHelper.class);
     manager.register("ResQAutoHelperBlue", ResQAutoHelperBlue.class);
     manager.register("ResQAutoHelperRed", ResQAutoHelperRed.class);
+    manager.register("ResQTest", ResQTest.class);
 
     /*
      * Uncomment any of the following lines if you want to register an op mode.
