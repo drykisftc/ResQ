@@ -1,8 +1,10 @@
 package com.qualcomm.ftcrobotcontroller.opmodes;
 
 import com.qualcomm.robotcore.hardware.ColorSensor;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.GyroSensor;
 import com.qualcomm.robotcore.robocol.Telemetry;
+import com.qualcomm.robotcore.util.Range;
 
 /**
  * Created by hfu on 11/3/15.
@@ -63,5 +65,31 @@ public class ResQUtils {
             if (m == rgb.b) return 'b';
         }
         return 'u'; // unknown color
+    }
+
+    static int followColorLine(char colorFollowed,
+                               ColorSensor cs,
+                               float snrLimit,
+                               int minBrightness,
+                               DcMotor left,
+                               DcMotor right,
+                               float powerForward,
+                               float powerTurn) {
+        RGB rgb = new RGB(0,0,0);
+        char color = getColor(cs,snrLimit,minBrightness,rgb);
+
+        int intensity = rgb.getIntensity();
+
+        if ( color != colorFollowed || intensity < minBrightness)
+        {
+            left.setPower(Range.clip(powerForward+powerTurn,-1,1));
+            right.setPower(Range.clip(powerForward - powerTurn,-1,1));
+        }
+        else {
+            left.setPower(Range.clip(powerForward-powerTurn,-1,1));
+            right.setPower(Range.clip(powerForward+powerTurn,-1,1));
+        }
+
+        return 0;
     }
 }

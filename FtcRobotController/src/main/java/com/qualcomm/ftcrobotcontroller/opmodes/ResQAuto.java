@@ -38,6 +38,8 @@ import com.qualcomm.robotcore.hardware.GyroSensor;
 import com.qualcomm.robotcore.hardware.I2cDevice;
 import com.qualcomm.robotcore.hardware.I2cDeviceReader;
 import com.qualcomm.robotcore.hardware.OpticalDistanceSensor;
+import com.qualcomm.robotcore.util.Range;
+
 import java.util.Queue;
 import java.util.Vector;
 import java.util.Collections;
@@ -73,7 +75,7 @@ public class ResQAuto extends ResQTeleOp {
 
     boolean enableLED = true;
 
-    float colorSensitivity = 1.2f;
+    float colorSensitivity = 1.5f;
 
     char teamColor = 'b';
 
@@ -87,7 +89,7 @@ public class ResQAuto extends ResQTeleOp {
     double turnPower = 0.2;
 
     int collisionDistThreshold = 20;
-    int minColorBrightness = 2;
+    int minColorBrightness = 10;
     TurnData prevTurnData;
     double prevTurnPower = 0.0;
 
@@ -96,7 +98,10 @@ public class ResQAuto extends ResQTeleOp {
     int currentGyro = 0;
     int targetAngle = 0;
     int targetAngleTolerance = 1;
-    float[] angle2PowerLUT = {0.2f, 0.2f, 0.25f, 0.3f, 0.35f, 0.4f, 0.5f};
+    float[] angle2PowerLUT = {0.05f, 0.1f, 0.15f, 0.2f, 0.25f, 0.3f, 0.35f, 0.4f, 0.5f};
+    int lastSkew =0;
+    float skewPowerScale = 1.0f;
+    float skewPowerGain = 1.2f;
 
     GyroData gyroData;
     int refXRotation = 0;
@@ -402,107 +407,38 @@ public class ResQAuto extends ResQTeleOp {
         motorBottomLeft.setPower(power);
     }
 
-    int getColorIntensity(char color) {
-        int intensity = 0;
-        switch (color) {
-            case 'r':
-                intensity = sensorRGB.red();
-                break;
-            case 'b':
-                intensity = sensorRGB.blue();
-                break;
-            case 'g':
-                intensity = sensorRGB.green();
-                break;
-            case 'w':
-                intensity = sensorRGB.red() + sensorRGB.green() + sensorRGB.blue();
-                break;
-            default:
-                break;
-        }
-        return intensity;
-    }
-
-    void followColor(char color,
-                     double powerForward, double maxPowerTurn,
-                     int intensityThreshold, int intensityDeltaThreshold) {
-
-        int intensity = getColorIntensity(color);
-
-        // totally lost, make circles until find the line again
-        if (intensity < intensityThreshold) {
-            turnDataFIFO.clear();
-            motorBottomRight.setPower(maxPowerTurn);
-            motorBottomLeft.setPower(-maxPowerTurn);
-            return;
-        }
-
-        // adjust turn power
-        double powerTurn = 0.0;
-        if (prevTurnData.intensity > 0) {
-
-            int colorDelta = intensity - prevTurnData.intensity;
-            if (Math.abs(colorDelta) > intensityDeltaThreshold) {
-                powerTurn = estimateTurnPower(maxPowerTurn);
-            }
-        }
-
-        // adjust motor power
-        motorBottomRight.setPower(powerForward + powerTurn);
-        motorBottomLeft.setPower(powerForward - powerTurn);
-
-        // log history
-        prevTurnData.intensity = intensity;
-        prevTurnData.turnPower = prevTurnPower;
-        if (turnDataFIFO.size() >= 3) {
-            turnDataFIFO.remove();
-        }
-        turnDataFIFO.offer(prevTurnData);
-        prevTurnPower = turnPower;
-    }
-
-    double estimateTurnPower(double maxTurnPower) {
-        double p = maxTurnPower;
-
-        //copy turnDataFIFO
-        Vector<TurnData> v = new Vector<TurnData>(turnDataFIFO.size());
-        for (TurnData q : turnDataFIFO) {
-            v.add(q);
-        }
-
-        // add up deltaPower
-        for (int i = 1; i < v.size(); i++) {
-            v.elementAt(i).turnPower += v.elementAt(i - 1).turnPower;
-        }
-
-        // sort power
-        Collections.sort(v);
-
-        //  3 point interpolation, quadratic fit to maximize the intensity
-
-
-        return p;
-    }
-
-    double getDeltaPowerByDeltaAngle(int deltaAngle) {
+    double getDeltaPowerByDeltaAngle(int deltaAngle, float gain) {
         if (Math.abs(deltaAngle) < targetAngleTolerance) {
             return 0.0f;
         } else {
-            return ResQUtils.lookUpTableFunc((float) deltaAngle * 0.005f, angle2PowerLUT); // 180 degree max
+            return ResQUtils.lookUpTableFunc((float) deltaAngle * gain, angle2PowerLUT); // 180 degree max
         }
     }
 
-    void maintainAngle(int target, int current, double power) {
+    int maintainAngle(int target, int current, double power) {
         int skew = getAngleDelta(current, target);
-        double turn = getDeltaPowerByDeltaAngle(skew);
-        double left = power + turn;
-        double right = power - turn;
+        double turn = getDeltaPowerByDeltaAngle(skew, 0.005f);
+
+        // increase turn power if stuck
+        if ( Math.abs(skew - lastSkew) < targetAngleTolerance) {
+            skewPowerScale *= skewPowerGain;
+        }
+        else {
+            skewPowerScale = 1.0f;
+        }
+        turn *= skewPowerScale;
+
+        // turn
+        double left = Range.clip(power + turn, -1.0, 1.0);
+        double right = Range.clip(power -turn, -1.0, 1.0);
         motorBottomRight.setPower(left);
         motorBottomLeft.setPower(right);
         telemetry.addData("SKEW", String.format("%03d", skew) + "degree");
         telemetry.addData("WHEEL", "left pwr:" + String.format("%.2g", left) +
                 " right pwr:" + String.format("%.2g", right) +
                 " turn pwr:" + String.format("%.2g", turn));
+        lastSkew = skew;
+        return skew;
     }
 
     /**
@@ -529,5 +465,6 @@ public class ResQAuto extends ResQTeleOp {
         }
         return delta;
     }
+
 }
 

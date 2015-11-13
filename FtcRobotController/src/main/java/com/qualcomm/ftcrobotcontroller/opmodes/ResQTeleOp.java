@@ -261,7 +261,7 @@ public class ResQTeleOp extends OpMode {
 	int moveLeftArm(float leftArmPower)
 	{
 		// check motor limit
-        motorTopLeft.setChannelMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+        motorTopLeft.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
 		int leftArmCurrent = motorTopLeft.getCurrentPosition();
 		if ( leftArmCurrent< leftArmUpperLimit && leftArmPower <0) {
 			// do something to prevent jamming
@@ -284,7 +284,7 @@ public class ResQTeleOp extends OpMode {
 	int moveRightArm(float rightArmPower)
 	{
         int rightArmCurrent = motorTopRight.getCurrentPosition();
-        motorTopRight.setChannelMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+        motorTopRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
         if (rightArmCurrent < rightArmUpperLimit && rightArmPower <0 ) {
             // do something to prevent jamming
         }
@@ -305,13 +305,13 @@ public class ResQTeleOp extends OpMode {
 
     void holdLeftArm ()
     {
-        motorTopLeft.setChannelMode(DcMotorController.RunMode.RUN_TO_POSITION);
+        motorTopLeft.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
         motorTopLeft.setTargetPosition(leftArmLastPos);
     }
 
     void holdRightArm()
     {
-        motorTopRight.setChannelMode(DcMotorController.RunMode.RUN_TO_POSITION);
+        motorTopRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
         motorTopRight.setTargetPosition(rightArmLastPos);
     }
 

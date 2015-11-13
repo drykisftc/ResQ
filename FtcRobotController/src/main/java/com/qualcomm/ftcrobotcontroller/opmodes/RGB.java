@@ -13,4 +13,8 @@ public class RGB {
         g = gg;
         b = bb;
     }
+
+    int getIntensity(){
+        return r+g+b;
+    }
 }
