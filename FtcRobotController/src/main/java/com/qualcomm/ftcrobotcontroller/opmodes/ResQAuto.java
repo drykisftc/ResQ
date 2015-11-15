@@ -84,12 +84,12 @@ public class ResQAuto extends ResQTeleOp {
     long timeBudget = 30000; // 30 seconds
     long lastStateTimeStamp = 0;
 
-    double cruisePower = 0.3;
-    double searchPower = 0.25;
-    double turnPower = 0.2;
+    float cruisePower = 0.3f;
+    float searchPower = 0.25f;
+    float turnPower = 0.2f;
 
     int collisionDistThreshold = 20;
-    int minColorBrightness = 10;
+    int minColorBrightness = 3;
     TurnData prevTurnData;
     double prevTurnPower = 0.0;
 
@@ -339,26 +339,26 @@ public class ResQAuto extends ResQTeleOp {
 
         telemetry.addData("STATE",
                 ": Move toward beacon...distance ("
-                        + String.format("%03d", distanceLeft)+ ", "
+                        + String.format("%03d", distanceLeft) + ", "
                         + String.format("%03d", distanceRight) + ") ");
         telemetry.addData("COLOR", ": " + color +
                 " r=" + String.format("%d", rgb.r) +
                 " g=" + String.format("%d", rgb.g) +
                 " b=" + String.format("%d", rgb.b));
-        if (distanceLeft < collisionDistThreshold
+        if (System.currentTimeMillis() - lastStateTimeStamp < 1500) {
+            maintainAngle(targetAngle, currentGyro, power);
+        } else {
+            if (distanceLeft < collisionDistThreshold
                 && distanceRight < collisionDistThreshold
                 && color != teamColor) {
-            if (System.currentTimeMillis() - lastStateTimeStamp < 1000) {
-                maintainAngle(targetAngle, currentGyro, power);
-            } else {
                 maintainAngle(targetAngle, currentGyro, searchPower);
+            } else {
+                motorBottomRight.setPower(0.0);
+                motorBottomLeft.setPower(0.0);
+                lastStateTimeStamp = System.currentTimeMillis();
+                telemetry.addData("STATE", ": Move to beacon done");
+                stateCode = 3;
             }
-        } else {
-            motorBottomRight.setPower(0.0);
-            motorBottomLeft.setPower(0.0);
-            lastStateTimeStamp = System.currentTimeMillis();
-            telemetry.addData("STATE", ": Move to beacon done");
-            stateCode = 3;
         }
 
         return stateCode;
@@ -367,8 +367,32 @@ public class ResQAuto extends ResQTeleOp {
     int searchBeacon(double power) {
         int stateCode = 3;
 
+        int distanceLeft = sensorODSLeft.getLightDetectedRaw();
+        int distanceRight = sensorODSRight.getLightDetectedRaw();
+        char color = ResQUtils.getColor(sensorRGB, colorSensitivity, minColorBrightness,rgb);
+
+        telemetry.addData("STATE",
+                ": Search beacon...distance ("
+                        + String.format("%03d", distanceLeft) + ", "
+                        + String.format("%03d", distanceRight) + ") ");
+        telemetry.addData("COLOR", ": " + color +
+                " r=" + String.format("%d", rgb.r) +
+                " g=" + String.format("%d", rgb.g) +
+                " b=" + String.format("%d", rgb.b));
+
         // following color lines, searching for the white line
-        stateCode = 4;
+        if (System.currentTimeMillis() - lastStateTimeStamp < 1500) {
+            ResQUtils.followColorLine('u', sensorRGB,
+                    colorSensitivity, minColorBrightness,
+                    motorBottomLeft, motorBottomRight, searchPower, turnPower);
+        }
+        else {
+            motorBottomRight.setPower(0.0);
+            motorBottomLeft.setPower(0.0);
+            lastStateTimeStamp = System.currentTimeMillis();
+            telemetry.addData("STATE", ": Search beacon done");
+            stateCode = 4;
+        }
 
         return stateCode;
     }
