@@ -73,6 +73,8 @@ public class ResQAuto extends ResQTeleOp {
 
     GyroSensor sensorGyro;
 
+    ResQCamera camera;
+
     boolean enableLED = true;
 
     float colorSensitivity = 1.5f;
@@ -98,10 +100,10 @@ public class ResQAuto extends ResQTeleOp {
     int currentGyro = 0;
     int targetAngle = 0;
     int targetAngleTolerance = 1;
-    float[] angle2PowerLUT = {0.05f, 0.1f, 0.15f, 0.2f, 0.25f, 0.3f, 0.35f, 0.4f, 0.5f};
-    int lastSkew =0;
+    float[] angle2PowerLUT = {0.05f, 0.1f, 0.15f, 0.2f, 0.25f, 0.3f, 0.35f, 0.4f, 0.5f, 0.6f};
+    float lastSkew =0;
     float skewPowerScale = 1.0f;
-    float skewPowerGain = 1.2f;
+    float skewPowerGain = 1.06f;
 
     GyroData gyroData;
     int refXRotation = 0;
@@ -154,6 +156,8 @@ public class ResQAuto extends ResQTeleOp {
         sensorGyro.calibrate();
 
         gyroData = new GyroData(0,0,0,0);
+
+        camera = new ResQCamera();
 
         // wait 1 second for gyro calibration
         try {
@@ -221,7 +225,7 @@ public class ResQAuto extends ResQTeleOp {
             switch (state) {
                 case 0:
                     // go straight
-                    state = goStraight(cruisePower);
+                    state = goStraight(cruisePower, 3500);
                     break;
                 case 1:
                     // turn
@@ -273,7 +277,7 @@ public class ResQAuto extends ResQTeleOp {
         sensorODSLeft.enableLed(enableLED);
     }
 
-    int goStraight(double power) {
+    int goStraight(double power, long timeLimit) {
         int stateCode = 0;
         char color = ResQUtils.getColor(sensorRGB, colorSensitivity, minColorBrightness,rgb);
         telemetry.addData("COLOR", ": " + color +
@@ -281,7 +285,8 @@ public class ResQAuto extends ResQTeleOp {
                 " g=" + String.format("%d", rgb.g) +
                 " b=" + String.format("%d", rgb.b));
 
-        if (color == 'b' || color == 'r') {
+        if (color == 'b' || color == 'r'
+                || System.currentTimeMillis() - startTime > timeLimit) { // time out
             // stop at the center blue/red line
             motorBottomRight.setPower(0);
             motorBottomLeft.setPower(0);
@@ -289,12 +294,12 @@ public class ResQAuto extends ResQTeleOp {
             // set the next state
             if (teamColor == 'b') {
                 telemetry.addData("STATE", ": Turning right...");
-                targetAngle = normalizeAngle(currentGyro - 90);
+                targetAngle = normalizeAngle(targetAngle - 90);
             } else {
                 telemetry.addData("STATE", ": Turning left...");
-                targetAngle = normalizeAngle(currentGyro + 90);
+                targetAngle = normalizeAngle(targetAngle + 90);
             }
-            return 1;
+            stateCode = 1;
         } else {
             telemetry.addData("STATE", ": Going Straight...");
             if (System.currentTimeMillis() - startTime < 1000) { // first second, fast
@@ -309,7 +314,6 @@ public class ResQAuto extends ResQTeleOp {
     int turn(double power) {
         int stateCode = 1;
 
-        // TODO: turn 90 degree until camera see beacon
         if (Math.abs(currentGyro - targetAngle) < targetAngleTolerance) {
             motorBottomRight.setPower(0.0);
             motorBottomLeft.setPower(0.0);
@@ -331,6 +335,16 @@ public class ResQAuto extends ResQTeleOp {
     int moveToBeacon(double power) {
         int stateCode = 2;
 
+        // stop
+//        motorBottomRight.setPower(0.0);
+//        motorBottomLeft.setPower(0.0);
+//        camera.snapPicture();
+
+        // get skew angle from the camera
+
+
+        // adjust targe angle
+
         // keep the beacon in center until ODS trigger
         //if ( sensorODS.getLightDetectedRaw() )
         int distanceLeft = sensorODSLeft.getLightDetectedRaw();
@@ -346,7 +360,7 @@ public class ResQAuto extends ResQTeleOp {
                 " g=" + String.format("%d", rgb.g) +
                 " b=" + String.format("%d", rgb.b));
         if (System.currentTimeMillis() - lastStateTimeStamp < 1500) {
-            maintainAngle(targetAngle, currentGyro, power);
+            maintainAngle(targetAngle, currentGyro, power); // move away from color zone
         } else {
             if (distanceLeft < collisionDistThreshold
                 && distanceRight < collisionDistThreshold
@@ -367,6 +381,14 @@ public class ResQAuto extends ResQTeleOp {
     int searchBeacon(double power) {
         int stateCode = 3;
 
+        // stop and take picture
+//        motorBottomRight.setPower(0.0);
+//        motorBottomLeft.setPower(0.0);
+//        camera.snapPicture();
+
+        // get skew angle from the camera
+
+        // get distance sensor
         int distanceLeft = sensorODSLeft.getLightDetectedRaw();
         int distanceRight = sensorODSRight.getLightDetectedRaw();
         char color = ResQUtils.getColor(sensorRGB, colorSensitivity, minColorBrightness,rgb);
@@ -381,7 +403,7 @@ public class ResQAuto extends ResQTeleOp {
                 " b=" + String.format("%d", rgb.b));
 
         // following color lines, searching for the white line
-        if (System.currentTimeMillis() - lastStateTimeStamp < 1500) {
+        if (System.currentTimeMillis() - lastStateTimeStamp < 5500) {
             ResQUtils.followColorLine('u', sensorRGB,
                     colorSensitivity, minColorBrightness,
                     motorBottomLeft, motorBottomRight, searchPower, turnPower);
@@ -431,16 +453,16 @@ public class ResQAuto extends ResQTeleOp {
         motorBottomLeft.setPower(power);
     }
 
-    double getDeltaPowerByDeltaAngle(int deltaAngle, float gain) {
+    double getDeltaPowerByDeltaAngle(float deltaAngle, float gain) {
         if (Math.abs(deltaAngle) < targetAngleTolerance) {
             return 0.0f;
         } else {
-            return ResQUtils.lookUpTableFunc((float) deltaAngle * gain, angle2PowerLUT); // 180 degree max
+            return ResQUtils.lookUpTableFunc(deltaAngle * gain, angle2PowerLUT); // 180 degree max
         }
     }
 
-    int maintainAngle(int target, int current, double power) {
-        int skew = getAngleDelta(current, target);
+    float maintainAngle(float target, float current, double power) {
+        float skew = getAngleDelta((int)current, (int)target);
         double turn = getDeltaPowerByDeltaAngle(skew, 0.005f);
 
         // increase turn power if stuck
@@ -457,7 +479,7 @@ public class ResQAuto extends ResQTeleOp {
         double right = Range.clip(power -turn, -1.0, 1.0);
         motorBottomRight.setPower(left);
         motorBottomLeft.setPower(right);
-        telemetry.addData("SKEW", String.format("%03d", skew) + "degree");
+        telemetry.addData("SKEW", String.format("%.2g", skew) + "degree");
         telemetry.addData("WHEEL", "left pwr:" + String.format("%.2g", left) +
                 " right pwr:" + String.format("%.2g", right) +
                 " turn pwr:" + String.format("%.2g", turn));

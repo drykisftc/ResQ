@@ -36,10 +36,6 @@ import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.GyroSensor;
 import com.qualcomm.robotcore.hardware.OpticalDistanceSensor;
 
-import java.util.Collections;
-import java.util.Queue;
-import java.util.Vector;
-
 /**
  * Auto Mode
  * <p>
@@ -53,6 +49,8 @@ public class ResQTest extends OpMode {
     OpticalDistanceSensor sensorODSRight;
 
     GyroSensor sensorGyro;
+
+    ResQCamera camera;
 
     int refGyro = 0;
     int prevGyro = 0;
@@ -93,6 +91,8 @@ public class ResQTest extends OpMode {
 
         gyroData = new GyroData(0,0,0,0);
 
+        camera = new ResQCamera();
+
         // wait 1 second for gyro calibration
         try {
             Thread.sleep(1500);                 //1000 milliseconds is one second.
@@ -130,7 +130,6 @@ public class ResQTest extends OpMode {
     @Override
     public void loop() {
 
-
         prevGyro = currentGyro;
         //currentGyro = getGyroHeading();
         //upateRotationData();
@@ -153,6 +152,12 @@ public class ResQTest extends OpMode {
         telemetry.addData("DISTANCE", " ("
                 + String.format("%03d", distanceLeft) + ", "
                 + String.format("%03d", distanceRight) + ") ");
+
+        camera.snapPicture();
+        telemetry.addData("CAMERA", " (Beacon skew: " + String.format("%03d", camera.fSkew)
+                + ", Seen: " + String.format("%b", camera.bBeaconSeen)
+                + ", left: " + camera.cLeftColor
+                + ", right: " + camera.cRightColor+ ")");
     }
 
     /*
