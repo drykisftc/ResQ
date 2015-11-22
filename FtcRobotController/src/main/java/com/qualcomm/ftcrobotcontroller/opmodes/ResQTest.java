@@ -31,6 +31,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 package com.qualcomm.ftcrobotcontroller.opmodes;
 
+import android.hardware.Camera;
+
+import com.qualcomm.ftcrobotcontroller.FtcRobotControllerActivity;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.GyroSensor;
@@ -69,6 +72,14 @@ public class ResQTest extends OpMode {
 
     }
 
+    private Camera.PreviewCallback previewCallback = new Camera.PreviewCallback() {
+        public void onPreviewFrame(byte[] data, Camera camera)
+        {
+            Camera.Parameters parameters = camera.getParameters();
+
+        }
+    };
+
     /*
 	 * Code to run when the op mode is first enabled goes here
 	 * 
@@ -92,6 +103,11 @@ public class ResQTest extends OpMode {
         gyroData = new GyroData(0,0,0,0);
 
         camera = new ResQCamera();
+
+        FtcRobotControllerActivity.mCamera.setPreviewCallback(previewCallback);
+
+        ((FtcRobotControllerActivity)hardwareMap.appContext)
+                .initPreview(FtcRobotControllerActivity.mCamera, camera, previewCallback);
 
         // wait 1 second for gyro calibration
         try {
@@ -153,8 +169,12 @@ public class ResQTest extends OpMode {
                 + String.format("%03d", distanceLeft) + ", "
                 + String.format("%03d", distanceRight) + ") ");
 
-        camera.snapPicture();
-        telemetry.addData("CAMERA", " (Beacon skew: " + String.format("%03d", camera.fSkew)
+        try {
+            camera.snapPicture();
+        } catch (Exception e){
+            telemetry.addData("ERRORMSG", e.toString());
+        }
+        telemetry.addData("CAMERA", " (Beacon skew: " + String.format("%.2g", camera.fSkew)
                 + ", Seen: " + String.format("%b", camera.bBeaconSeen)
                 + ", left: " + camera.cLeftColor
                 + ", right: " + camera.cRightColor+ ")");

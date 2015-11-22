@@ -99,11 +99,11 @@ public class ResQAuto extends ResQTeleOp {
     int prevGyro = 0;
     int currentGyro = 0;
     int targetAngle = 0;
-    int targetAngleTolerance = 1;
+    int targetAngleTolerance = 2;
     float[] angle2PowerLUT = {0.05f, 0.1f, 0.15f, 0.2f, 0.25f, 0.3f, 0.35f, 0.4f, 0.5f, 0.6f};
     float lastSkew =0;
     float skewPowerScale = 1.0f;
-    float skewPowerGain = 1.06f;
+    float skewPowerGain = 1.09f;
 
     GyroData gyroData;
     int refXRotation = 0;
@@ -175,7 +175,8 @@ public class ResQAuto extends ResQTeleOp {
         currentGyro = gyroData.heading;
         refGyro = currentGyro;
         prevGyro = currentGyro;
-        telemetry.addData("GYRO", "GYRO: " + String.format("%03d", normalizeAngle(currentGyro-refGyro))
+        targetAngle = currentGyro;
+        telemetry.addData("GYRO", "GYRO: " + String.format("%03d", targetAngle)
                 + " (" + String.format("%03d", currentGyro)
                 + " ," + String.format("%03d", gyroData.xRotation)
                 + " ," + String.format("%03d", gyroData.yRotation)
@@ -197,6 +198,12 @@ public class ResQAuto extends ResQTeleOp {
 
         // set the next state
         targetAngle = currentGyro;
+        telemetry.addData("GYRO", "GYRO: " + String.format("%03d", targetAngle)
+                + " (" + String.format("%03d", currentGyro)
+                + " ," + String.format("%03d", gyroData.xRotation)
+                + " ," + String.format("%03d", gyroData.yRotation)
+                + " ," + String.format("%03d", gyroData.zRotation)+")");
+
         startTime = System.currentTimeMillis();
 
     }

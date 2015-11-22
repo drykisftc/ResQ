@@ -48,6 +48,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -61,6 +62,8 @@ import com.qualcomm.ftccommon.LaunchActivityConstantsList;
 import com.qualcomm.ftccommon.Restarter;
 import com.qualcomm.ftccommon.UpdateUI;
 import com.qualcomm.ftcrobotcontroller.opmodes.FtcOpModeRegister;
+import com.qualcomm.ftcrobotcontroller.opmodes.ResQCamera;
+import com.qualcomm.ftcrobotcontroller.opmodes.ResQTest;
 import com.qualcomm.hardware.HardwareFactory;
 import com.qualcomm.robotcore.hardware.configuration.Utility;
 import com.qualcomm.robotcore.util.Dimmer;
@@ -205,17 +208,17 @@ public class FtcRobotControllerActivity extends Activity {
 
   @Override
   protected void onResume() {
-    super.onResume();
-
       if (bCameraOn){
           openFrontFacingCamera();
       }
+    super.onResume();
+
   }
 
   @Override
   public void onPause() {
-      super.onPause();
       releaseCamera();
+      super.onPause();
   }
 
   @Override
@@ -391,32 +394,43 @@ public class FtcRobotControllerActivity extends Activity {
   }
 
   static public Camera mCamera = null;
-    static public Boolean bCameraOn = false;
+  static public Boolean bCameraOn = false;
 
-    static public Camera openFrontFacingCamera() {
-        int cameraId = -1;
-        releaseCamera();
-        int numberOfCameras = Camera.getNumberOfCameras();
-        for (int i = 0; i < numberOfCameras; i++) {
-            Camera.CameraInfo info = new Camera.CameraInfo();
-            Camera.getCameraInfo(i, info);
-            if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-                cameraId = i;
-                break;
-            }
-        }
-        try {
-            mCamera = Camera.open(cameraId);
-        } catch (Exception e) {
-
-        }
-        return mCamera;
+  static public Camera openFrontFacingCamera() {
+    int cameraId = -1;
+    releaseCamera();
+    int numberOfCameras = Camera.getNumberOfCameras();
+    for (int i = 0; i < numberOfCameras; i++) {
+      Camera.CameraInfo info = new Camera.CameraInfo();
+      Camera.getCameraInfo(i, info);
+      if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+        cameraId = i;
+        break;
+      }
     }
+    try {
+      mCamera = Camera.open(cameraId);
+    } catch (Exception e) {
 
-    static public void releaseCamera(){
-        if (mCamera != null){
-            mCamera.release();        // release the camera for other applications
-            mCamera = null;
-        }
     }
+    return mCamera;
+  }
+
+  public void initPreview(final Camera camera, final ResQCamera context, final Camera.PreviewCallback previewCallback) {
+    runOnUiThread(new Runnable() {
+      @Override
+      public void run() {
+        context.mPreview = new CameraPreview(FtcRobotControllerActivity.this, camera, previewCallback);
+        FrameLayout previewLayout = (FrameLayout) findViewById(R.id.previewLayout);
+        previewLayout.addView(context.mPreview);
+      }
+    });
+  }
+
+  static public void releaseCamera() {
+    if (mCamera != null) {
+      mCamera.release();        // release the camera for other applications
+      mCamera = null;
+    }
+  }
 }
