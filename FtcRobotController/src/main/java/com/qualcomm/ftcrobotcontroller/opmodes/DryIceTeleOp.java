@@ -197,7 +197,7 @@ public class DryIceTeleOp extends OpMode {
 			leftArm = Range.clip(leftArm, -1, 1);
 			//int leftArmCurrent = moveLeftArmDeltaPosition(leftArm, armMaxDelta);
 			leftArm = ResQUtils.lookUpTableFunc(leftArm, armPowerLUT) * leftArmPowerScale;
-			leftArmLastPos = moveLeftArm(leftArm);
+			leftArmLastPos = moveLeftArm(leftArm, !gamepad1.b);
 			telemetry.addData("left ARM ",
 					"pwr: " + String.format("%.2f", leftArm)
 							+ " pos: " + String.format("%05d", leftArmLastPos));
@@ -209,7 +209,7 @@ public class DryIceTeleOp extends OpMode {
 				rightArm = Range.clip(rightArm, -1, 1);
 				//int rightArmCurrent = moveRightArmDeltaPosition(rightArm, armMaxDelta);
 				rightArm = ResQUtils.lookUpTableFunc(rightArm, armPowerLUT) * rightArmPowerScale;
-				rightArmLastPos = moveRightArm(rightArm);
+				rightArmLastPos = moveRightArm(rightArm, !gamepad1.b);
 				telemetry.addData("right ARM ",
 						"pwr: " + String.format("%.2f", rightArm)
 								+ "pos: " + String.format("%05d", rightArmLastPos));
@@ -237,7 +237,7 @@ public class DryIceTeleOp extends OpMode {
 
         // logging
         telemetry.addData("left WHEEL ", "pwr: " + String.format("%.2f", left));
-        telemetry.addData("right WHEEL", "pwr: " +String.format("%.2f", right));
+        telemetry.addData("right WHEEL", "pwr: " + String.format("%.2f", right));
 		telemetry.addData("scooper", "pos: " + String.format("%.2g", scooper.getPosition()));
     }
 
@@ -250,20 +250,17 @@ public class DryIceTeleOp extends OpMode {
 	public void stop() {
         motorBottomRight.setPower(0.0f);
         motorBottomLeft.setPower(0.0f);
-        moveLeftArm(0.0f);
-        moveRightArm(0.0f);
+        moveLeftArm(0.0f,true);
+        moveRightArm(0.0f, true);
         scooper.setPosition(scooperParkingPos);
 	}
 
-	int moveLeftArm(float leftArmPower)
+	int moveLeftArm(float leftArmPower, boolean useLimit)
 	{
 		// check motor limit
         motorTopLeft.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
 		int leftArmCurrent = motorTopLeft.getCurrentPosition();
-		if ( leftArmCurrent< leftArmUpperLimit && leftArmPower <0) {
-			// do something to prevent jamming
-		}
-		else if  (leftArmCurrent > leftArmLowerLimit && leftArmPower >0) {
+		if (useLimit && isOutOfLeftArmLimit(leftArmCurrent,leftArmPower)) {
 			// do something to prevent jamming
 		}
 		else {
@@ -278,17 +275,17 @@ public class DryIceTeleOp extends OpMode {
 		return leftArmCurrent;
 	}
 
-	int moveRightArm(float rightArmPower)
+	boolean isOutOfLeftArmLimit (int pos, float power ){
+		return (pos < leftArmUpperLimit && power <0) || (pos > leftArmLowerLimit && power >0);
+	}
+
+	int moveRightArm(float rightArmPower, boolean useLimit)
 	{
         int rightArmCurrent = motorTopRight.getCurrentPosition();
         motorTopRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
-        if (rightArmCurrent < rightArmUpperLimit && rightArmPower <0 ) {
-            // do something to prevent jamming
-        }
-        else if (rightArmCurrent > rightArmLowerLimit && rightArmPower >0)
-        {
-            // do something to prevent jamming
-        }
+        if (useLimit && isOutOfRightArmLimit(rightArmCurrent, rightArmPower)){
+
+		}
         else {
             if (Math.abs(rightArmLastPower) >= 0.5 && Math.abs(rightArmLastPos - rightArmCurrent) < 30) {
                 motorTopRight.setPower(rightArmLastPower*0.5);
@@ -298,6 +295,10 @@ public class DryIceTeleOp extends OpMode {
         }
         rightArmLastPower = rightArmPower;
         return rightArmCurrent;
+	}
+
+	boolean isOutOfRightArmLimit (int pos, float power) {
+		return (pos < rightArmUpperLimit && power <0 ) || (pos > rightArmLowerLimit && power >0);
 	}
 
     void holdLeftArm ()
