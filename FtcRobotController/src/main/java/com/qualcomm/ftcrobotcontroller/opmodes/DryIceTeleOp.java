@@ -113,12 +113,14 @@ public class DryIceTeleOp extends OpMode {
 	public void init() {
 
 		motorBottomRight = hardwareMap.dcMotor.get("bottomRightM");
+		motorBottomRight.setDirection(DcMotor.Direction.REVERSE);
 		motorBottomLeft = hardwareMap.dcMotor.get("bottomLeftM");
-		motorBottomLeft.setDirection(DcMotor.Direction.REVERSE);
+		//motorBottomLeft.setDirection(DcMotor.Direction.REVERSE);
 
 		motorTopRight = hardwareMap.dcMotor.get("topRightM");
+		//motorTopRight.setDirection(DcMotor.Direction.REVERSE);
 		motorTopLeft = hardwareMap.dcMotor.get("topLeftM");
-		motorTopRight.setDirection(DcMotor.Direction.REVERSE);
+		motorTopLeft.setDirection(DcMotor.Direction.REVERSE);
 
 		scooper = hardwareMap.servo.get("scooper");
 		elevator = hardwareMap.servo.get("elevator");
@@ -167,8 +169,8 @@ public class DryIceTeleOp extends OpMode {
 		// and 1 is full right
 		float throttle = -gamepad1.left_stick_y;
 		float direction = gamepad1.left_stick_x;
-		float right = throttle + direction;
-		float left = throttle - direction;
+		float right = throttle - direction;
+		float left = throttle + direction;
 
 
 		// clip the right/left values so that the values never exceed +/- 1
