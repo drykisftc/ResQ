@@ -57,6 +57,7 @@ public class FtcOpModeRegister implements OpModeRegister {
 
     manager.register("NullOp", NullOp.class);
     manager.register("DryIceTeleOp", DryIceTeleOp.class);
+    manager.register("DryIceAuto", DryIceAuto.class);
     manager.register ("ResQTeleOp", ResQTeleOp.class);
     manager.register("ResQAuto", ResQAuto.class);
     manager.register("ResQAutoBlue", ResQAutoBlue.class);

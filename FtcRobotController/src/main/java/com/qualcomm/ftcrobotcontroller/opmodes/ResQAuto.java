@@ -44,20 +44,6 @@ import java.util.Queue;
 import java.util.Vector;
 import java.util.Collections;
 
-class TurnData implements Comparable<TurnData>
-{
-    int intensity = -1;
-    double turnPower = 0.0;
-    double gyroPos = 0.0;
-
-    public int compareTo (TurnData a)
-    {
-        if (turnPower > a.turnPower)
-            return 1;
-        else
-            return 0;
-    }
-}
 
 /**
  * Auto Mode

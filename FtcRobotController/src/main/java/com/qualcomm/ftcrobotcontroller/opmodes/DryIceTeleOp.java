@@ -70,6 +70,11 @@ public class DryIceTeleOp extends OpMode {
 	float rightArmPowerScale;
 	int armMaxDelta = 3;
 
+	float leftArmHoldPower = 0.6f;
+	int leftArmHoldPosition = 0;
+	float rigthtArmHoldPower = 0.9f;
+	int rightArmHoldPosition =0;
+
 	// scooper
 	Servo scooper;
 	float scooperDelta = 0.1f;
@@ -84,6 +89,12 @@ public class DryIceTeleOp extends OpMode {
 	float elevatorDownPosition = 0.001f;
 	float elevatorStopPosition = 0.52f;
 
+	// dumper
+	Servo dumper;
+	float dumperLoadPosition = 0.99f;
+	float dumperUnloadPosition = 0.01f;
+	float dumperParkPostion= 0.5f;
+
 	float[] wheelPowerLUT = {0.0f, 0.05f, 0.15f, 0.18f, 0.20f,
 			0.22f, 0.24f, 0.26f, 0.28f, 0.30f, 0.32f, 0.34f, 0.36f,
 			0.38f, 0.42f, 0.46f, 0.50f, 0.54f, 0.58f, 0.62f, 0.66f,
@@ -97,6 +108,11 @@ public class DryIceTeleOp extends OpMode {
 			0.41f, 0.42f, 0.43f, 0.44f, 0.45f, 0.46f, 0.47f, 0.48f,
 			0.49f, 0.50f, 0.51f, 0.52f, 0.53f, 0.54f, 0.55f, 0.56f,
 			0.60f, 0.65f, 0.70f, 0.75f, 0.80f, 0.85f, 0.90f, 0.95f, 1.0f };
+
+	int leftWheelStartPos =0;
+	int rightWheelStartPos =0;
+	int leftWheelCurrent = 0;
+	int rightWheelCurrent = 0;
 	/**
 	 * Constructor
 	 */
@@ -124,6 +140,7 @@ public class DryIceTeleOp extends OpMode {
 
 		scooper = hardwareMap.servo.get("scooper");
 		elevator = hardwareMap.servo.get("elevator");
+		dumper = hardwareMap.servo.get("dumper");
 
 		// assign the starting position of the wrist and claw
 		leftArmLastPos = motorTopLeft.getCurrentPosition();
@@ -146,6 +163,12 @@ public class DryIceTeleOp extends OpMode {
 
         scooper.setPosition(scooperParkingPos);
 		elevator.setPosition(elevatorStopPosition);
+		dumper.setPosition(dumperLoadPosition);
+
+		leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
+		rightWheelStartPos = motorBottomRight.getCurrentPosition();
+		leftWheelCurrent = leftWheelStartPos;
+		rightWheelCurrent = rightWheelStartPos;
 
 	}
 
@@ -194,8 +217,12 @@ public class DryIceTeleOp extends OpMode {
 
 		// load position
 		if (gamepad1.left_bumper) {
-			holdLeftArm();
+			if (leftArmHoldPosition == 0){
+				leftArmHoldPosition = leftArmLastPos;
+			}
+			holdLeftArm(leftArmHoldPosition);
 		} else {
+			leftArmHoldPosition = 0;
 			leftArm = Range.clip(leftArm, -1, 1);
 			//int leftArmCurrent = moveLeftArmDeltaPosition(leftArm, armMaxDelta);
 			leftArm = ResQUtils.lookUpTableFunc(leftArm, armPowerLUT) * leftArmPowerScale;
@@ -206,15 +233,19 @@ public class DryIceTeleOp extends OpMode {
 		}
 
 		if (gamepad1.right_bumper) {
-			holdRightArm();
+			if (rightArmHoldPosition ==0) {
+				rightArmHoldPosition = rightArmLastPos;
+			}
+			holdRightArm(rightArmHoldPosition);
 		} else {
-				rightArm = Range.clip(rightArm, -1, 1);
-				//int rightArmCurrent = moveRightArmDeltaPosition(rightArm, armMaxDelta);
-				rightArm = ResQUtils.lookUpTableFunc(rightArm, armPowerLUT) * rightArmPowerScale;
-				rightArmLastPos = moveRightArm(rightArm, !gamepad1.b);
-				telemetry.addData("right ARM ",
-						"pwr: " + String.format("%.2f", rightArm)
-								+ "pos: " + String.format("%05d", rightArmLastPos));
+			rightArmHoldPosition = 0;
+			rightArm = Range.clip(rightArm, -1, 1);
+			//int rightArmCurrent = moveRightArmDeltaPosition(rightArm, armMaxDelta);
+			rightArm = ResQUtils.lookUpTableFunc(rightArm, armPowerLUT) * rightArmPowerScale;
+			rightArmLastPos = moveRightArm(rightArm, !gamepad1.b);
+			telemetry.addData("right ARM ",
+					"pwr: " + String.format("%.2f", rightArm)
+							+ "pos: " + String.format("%05d", rightArmLastPos));
 		}
 
 		// scooper
@@ -237,9 +268,21 @@ public class DryIceTeleOp extends OpMode {
 			elevator.setPosition(elevatorStopPosition);
 		}
 
+		// dumper
+		if (gamepad1.y) {
+			dumper.setPosition(dumperUnloadPosition);
+		} else {
+			dumper.setPosition(dumperLoadPosition);
+		}
+
+		leftWheelCurrent = motorBottomLeft.getCurrentPosition();
+		rightWheelCurrent = motorBottomLeft.getCurrentPosition();
+
         // logging
-        telemetry.addData("left WHEEL ", "pwr: " + String.format("%.2f", left));
-        telemetry.addData("right WHEEL", "pwr: " + String.format("%.2f", right));
+        telemetry.addData("left WHEEL ", "pwr: " + String.format("%.2f", left)
+				+ " distance: " + String.format("%05d", leftWheelCurrent-leftWheelStartPos));
+        telemetry.addData("right WHEEL", "pwr: " + String.format("%.2f", right)
+				+ " distance: " + String.format("%05d", rightWheelCurrent-rightWheelStartPos));
 		telemetry.addData("scooper", "pos: " + String.format("%.2g", scooper.getPosition()));
     }
 
@@ -303,16 +346,18 @@ public class DryIceTeleOp extends OpMode {
 		return (pos < rightArmUpperLimit && power <0 ) || (pos > rightArmLowerLimit && power >0);
 	}
 
-    void holdLeftArm ()
+    void holdLeftArm (int pos)
     {
         motorTopLeft.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
-        motorTopLeft.setTargetPosition(leftArmLastPos);
+        motorTopLeft.setTargetPosition(pos);
+		motorTopLeft.setPower(leftArmHoldPower);
     }
 
-    void holdRightArm()
+    void holdRightArm(int pos)
     {
         motorTopRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
-        motorTopRight.setTargetPosition(rightArmLastPos);
+        motorTopRight.setTargetPosition(pos);
+		motorTopRight.setPower(rigthtArmHoldPower);
     }
 
 //    int moveLeftArmDeltaPosition(float delta, int maxDelta)
