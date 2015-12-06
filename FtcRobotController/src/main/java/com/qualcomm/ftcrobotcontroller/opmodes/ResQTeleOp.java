@@ -307,12 +307,14 @@ public class ResQTeleOp extends OpMode {
     {
         motorTopLeft.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
         motorTopLeft.setTargetPosition(leftArmLastPos);
+		motorTopLeft.setPower(1.0);
     }
 
     void holdRightArm()
     {
         motorTopRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
         motorTopRight.setTargetPosition(rightArmLastPos);
+		motorTopRight.setPower(1.0);
     }
 
 //    int moveLeftArmDeltaPosition(float delta, int maxDelta)
