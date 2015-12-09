@@ -70,10 +70,13 @@ public class DryIceTeleOp extends OpMode {
 	float rightArmPowerScale;
 	int armMaxDelta = 3;
 
-	float leftArmHoldPower = 0.6f;
+	float leftArmHoldPower = 0.99f;
 	int leftArmHoldPosition = 0;
-	float rigthtArmHoldPower = 0.9f;
+	float rigthtArmHoldPower = 0.99f;
 	int rightArmHoldPosition =0;
+	float leftArmParkPower = 0.05f;
+	float rightArmParkPower = 0.1f;
+	int armJammedLimit = 30;
 
 	// scooper
 	Servo scooper;
@@ -103,7 +106,8 @@ public class DryIceTeleOp extends OpMode {
 			0.70f, 0.74f, 0.78f, 0.82f, 0.86f, 0.90f, 0.94f, 0.98f, 1.00f };
 
 	float [] wheelSpeedLUT = { 0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f,
-			8.0f, 9.0f, 10.0f, 11.0f, 20.0f, 30.0f, 40.0f, 50.0f };
+			8.0f, 9.0f, 10.0f, 11.0f, 20.0f, 30.0f, 40.0f, 50.0f, 60.0f, 70.0f,
+	        80.0f, 90.0f, 100.0f};
 
 	float[] armPowerLUT = { 0.0f, 0.01f, 0.02f, 0.03f, 0.04f, 0.05f, 0.06f, 0.07f,
 			0.08f, 0.09f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f,
@@ -113,6 +117,10 @@ public class DryIceTeleOp extends OpMode {
 			0.41f, 0.42f, 0.43f, 0.44f, 0.45f, 0.46f, 0.47f, 0.48f,
 			0.49f, 0.50f, 0.51f, 0.52f, 0.53f, 0.54f, 0.55f, 0.56f,
 			0.60f, 0.65f, 0.70f, 0.75f, 0.80f, 0.85f, 0.90f, 0.95f, 1.0f };
+
+	float [] armSpeedLUT = { 0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f,
+			8.0f, 9.0f, 10.0f, 11.0f, 20.0f, 30.0f, 40.0f, 50.0f, 60.0f, 70.0f,
+			80.0f, 90.0f, 100.0f, 110.0f, 120.0f, 140.0f, 160.0f, 180.0f, 200.0f};
 
 	int leftWheelStartPos =0;
 	int rightWheelStartPos =0;
@@ -210,18 +218,19 @@ public class DryIceTeleOp extends OpMode {
 		leftWheelCurrent = motorBottomLeft.getCurrentPosition();
 		rightWheelCurrent = motorBottomRight.getCurrentPosition();
 
-		if (gamepad1.left_stick_button || gamepad1.a)
+		if ((gamepad1.left_stick_button || gamepad1.a)
+				&& (Math.abs(left)>=0.02 || Math.abs(right) >=0.02) )
 		{
 			// traction control mode
-			left = leftWheelCurrent + ResQUtils.lookUpTableFunc(left, wheelSpeedLUT);
-			right = rightWheelCurrent + ResQUtils.lookUpTableFunc(right,wheelSpeedLUT);
-			moveLeftWheelByEncoder((int)(left), leftWheelTractionControlPower);
-			moveRightWheelByEncoder((int)(right), rightWheelTractionControlPower);
+			float leftSpeed = ResQUtils.lookUpTableFunc(left, wheelSpeedLUT);
+			float rightSpeed = ResQUtils.lookUpTableFunc(right,wheelSpeedLUT);
+			moveLeftWheelByEncoder((int)(leftWheelCurrent + leftSpeed), leftWheelTractionControlPower);
+			moveRightWheelByEncoder((int)(rightWheelCurrent + rightSpeed), rightWheelTractionControlPower);
 
 			// logging
-			telemetry.addData("left WHEEL ", "speed: " + String.format("%.2f", left)
+			telemetry.addData("left WHEEL ", "speed: " + String.format("%.2f", leftSpeed)
 					+ " distance: " + String.format("%05d", leftWheelCurrent - leftWheelStartPos));
-			telemetry.addData("right WHEEL", "speed: " + String.format("%.2f", right)
+			telemetry.addData("right WHEEL", "speed: " + String.format("%.2f", rightSpeed)
 					+ " distance: " + String.format("%05d", rightWheelCurrent - rightWheelStartPos));
 		}
 		else {
@@ -255,9 +264,14 @@ public class DryIceTeleOp extends OpMode {
 		} else {
 			leftArmHoldPosition = 0;
 			leftArm = Range.clip(leftArm, -1, 1);
-			//int leftArmCurrent = moveLeftArmDeltaPosition(leftArm, armMaxDelta);
-			leftArm = ResQUtils.lookUpTableFunc(leftArm, armPowerLUT) * leftArmPowerScale;
-			leftArmLastPos = moveLeftArm(leftArm, !gamepad1.b);
+
+			if (gamepad1.right_stick_button) {
+				leftArm = ResQUtils.lookUpTableFunc(leftArm, armPowerLUT) * leftArmPowerScale;
+				leftArmLastPos = moveLeftArm(leftArm, !gamepad1.b);
+			} else  {
+				leftArmLastPos = moveLeftArmByEncoder(leftArm, !gamepad1.b);
+			}
+
 			telemetry.addData("left ARM ",
 					"pwr: " + String.format("%.2f", leftArm)
 							+ " pos: " + String.format("%05d", leftArmLastPos));
@@ -271,9 +285,13 @@ public class DryIceTeleOp extends OpMode {
 		} else {
 			rightArmHoldPosition = 0;
 			rightArm = Range.clip(rightArm, -1, 1);
-			//int rightArmCurrent = moveRightArmDeltaPosition(rightArm, armMaxDelta);
-			rightArm = ResQUtils.lookUpTableFunc(rightArm, armPowerLUT) * rightArmPowerScale;
-			rightArmLastPos = moveRightArm(rightArm, !gamepad1.b);
+
+			if (gamepad1.right_stick_button) {
+				rightArm = ResQUtils.lookUpTableFunc(rightArm, armPowerLUT) * rightArmPowerScale;
+				rightArmLastPos = moveRightArm(rightArm, !gamepad1.b);
+			} else {
+				rightArmLastPos = moveRightArmByEncoder(rightArm, !gamepad1.b);
+			}
 			telemetry.addData("right ARM ",
 					"pwr: " + String.format("%.2f", rightArm)
 							+ "pos: " + String.format("%05d", rightArmLastPos));
@@ -327,28 +345,30 @@ public class DryIceTeleOp extends OpMode {
         scooper.setPosition(scooperParkingPos);
 	}
 
+	boolean isOutOfLeftArmLimit (int pos, float power ){
+		return (pos < leftArmUpperLimit && power <0) || (pos > leftArmLowerLimit && power >0);
+	}
+
+	boolean isOutOfRightArmLimit (int pos, float power) {
+		return (pos < rightArmUpperLimit && power <0 ) || (pos > rightArmLowerLimit && power >0);
+	}
+
 	int moveLeftArm(float leftArmPower, boolean useLimit)
 	{
 		// check motor limit
-        motorTopLeft.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
 		int leftArmCurrent = motorTopLeft.getCurrentPosition();
-		if (useLimit && isOutOfLeftArmLimit(leftArmCurrent,leftArmPower)) {
+        motorTopLeft.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+		if (useLimit && isOutOfLeftArmLimit(leftArmCurrent, leftArmPower)) {
 			// do something to prevent jamming
 		}
-		else {
-			// check whether motors go stuck
-			if (Math.abs(leftArmLastPower) >= 0.5 && Math.abs(leftArmLastPos - leftArmCurrent) < 30) {
-				motorTopLeft.setPower(leftArmLastPower*0.5); // lower power when arm stuck
-			} else {
-				motorTopLeft.setPower(leftArmPower);
-			}
+		else if (Math.abs(leftArmLastPower) >= 0.5
+				&& Math.abs(leftArmLastPos - leftArmCurrent) < armJammedLimit) {
+			motorTopLeft.setPower(leftArmLastPower * 0.2); // lower power when arm stuck
+		} else {
+			motorTopLeft.setPower(leftArmPower);
 		}
         leftArmLastPower = leftArmPower;
 		return leftArmCurrent;
-	}
-
-	boolean isOutOfLeftArmLimit (int pos, float power ){
-		return (pos < leftArmUpperLimit && power <0) || (pos > leftArmLowerLimit && power >0);
 	}
 
 	int moveRightArm(float rightArmPower, boolean useLimit)
@@ -356,21 +376,53 @@ public class DryIceTeleOp extends OpMode {
         int rightArmCurrent = motorTopRight.getCurrentPosition();
         motorTopRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
         if (useLimit && isOutOfRightArmLimit(rightArmCurrent, rightArmPower)){
-
+			// do something to prevent jamming
 		}
-        else {
-            if (Math.abs(rightArmLastPower) >= 0.5 && Math.abs(rightArmLastPos - rightArmCurrent) < 30) {
-                motorTopRight.setPower(rightArmLastPower*0.5);
-            } else {
-                motorTopRight.setPower(rightArmPower);
-            }
-        }
+        else if (Math.abs(rightArmLastPower) >= 0.5
+				&& Math.abs(rightArmLastPos - rightArmCurrent) < armJammedLimit) {
+			motorTopRight.setPower(rightArmLastPower * 0.2);
+		} else {
+			motorTopRight.setPower(rightArmPower);
+		}
+
         rightArmLastPower = rightArmPower;
         return rightArmCurrent;
 	}
 
-	boolean isOutOfRightArmLimit (int pos, float power) {
-		return (pos < rightArmUpperLimit && power <0 ) || (pos > rightArmLowerLimit && power >0);
+	int moveLeftArmByEncoder(float left, boolean useLimit)
+	{
+		// check motor limit
+		int armCurrent = motorTopLeft.getCurrentPosition();
+		int nextPosition = (int)(armCurrent + ResQUtils.lookUpTableFunc(left, armSpeedLUT));
+
+		if (useLimit && isOutOfLeftArmLimit(nextPosition, left)) {
+			// do something to prevent jamming
+		} else {
+			motorTopLeft.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
+			motorTopLeft.setTargetPosition(nextPosition);
+			motorTopLeft.setPower(Math.max(leftArmParkPower,Math.abs(left)));
+		}
+		leftArmLastPower = left;
+		leftArmLastPos = armCurrent;
+		return armCurrent;
+	}
+
+	int moveRightArmByEncoder(float right, boolean useLimit)
+	{
+		// check motor limit
+		int armCurrent = motorTopRight.getCurrentPosition();
+		int nextPosition = (int)(armCurrent + ResQUtils.lookUpTableFunc(right, armSpeedLUT));
+
+		if (useLimit && isOutOfRightArmLimit(nextPosition, right)) {
+			// do something to prevent jamming
+		} else {
+			motorTopRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
+			motorTopRight.setTargetPosition(nextPosition);
+			motorTopRight.setPower(Math.max(rightArmParkPower, Math.abs(right)));
+		}
+		rightArmLastPower = right;
+		rightArmLastPos = armCurrent;
+		return armCurrent;
 	}
 
     void holdLeftArm (int pos)
