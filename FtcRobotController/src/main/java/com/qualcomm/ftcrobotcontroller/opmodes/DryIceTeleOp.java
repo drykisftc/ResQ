@@ -118,6 +118,8 @@ public class DryIceTeleOp extends OpMode {
 	int rightWheelStartPos =0;
 	int leftWheelCurrent = 0;
 	int rightWheelCurrent = 0;
+	float leftWheelTractionControlPower = 1.0f;
+	float rightWheelTractionControlPower = 1.0f;
 	/**
 	 * Constructor
 	 */
@@ -174,7 +176,6 @@ public class DryIceTeleOp extends OpMode {
 		rightWheelStartPos = motorBottomRight.getCurrentPosition();
 		leftWheelCurrent = leftWheelStartPos;
 		rightWheelCurrent = rightWheelStartPos;
-
 	}
 
 	/*
@@ -198,26 +199,30 @@ public class DryIceTeleOp extends OpMode {
 		float throttle  = -gamepad1.left_stick_y;
 		float direction = gamepad1.left_stick_x;
 
-		// gamepad2 is mainly used for driving
-		if ( Math.abs(gamepad2.left_stick_x) >= 0.01 && Math.abs(gamepad2.left_stick_y) >= 0.01) {
-			throttle  = -gamepad2.left_stick_y;
-			direction = gamepad2.left_stick_x;
-		}
-
 		// driving power
 		float right = throttle - direction;
 		float left = throttle + direction;
-
 
 		// clip the right/left values so that the values never exceed +/- 1
 		right = Range.clip(right, -1, 1);
 		left  = Range.clip(left, -1, 1);
 
-		if (gamepad1.left_stick_button || gamepad2.left_stick_button)
+		leftWheelCurrent = motorBottomLeft.getCurrentPosition();
+		rightWheelCurrent = motorBottomRight.getCurrentPosition();
+
+		if (gamepad1.left_stick_button || gamepad1.a)
 		{
 			// traction control mode
-			moveLeftWheelByEncoder((int)(leftWheelCurrent + ResQUtils.lookUpTableFunc(left, wheelSpeedLUT)), 1.0f);
-			moveRightWheelByEncoder((int)(rightWheelCurrent + ResQUtils.lookUpTableFunc(right,wheelSpeedLUT)), 1.0f);
+			left = leftWheelCurrent + ResQUtils.lookUpTableFunc(left, wheelSpeedLUT);
+			right = rightWheelCurrent + ResQUtils.lookUpTableFunc(right,wheelSpeedLUT);
+			moveLeftWheelByEncoder((int)(left), leftWheelTractionControlPower);
+			moveRightWheelByEncoder((int)(right), rightWheelTractionControlPower);
+
+			// logging
+			telemetry.addData("left WHEEL ", "speed: " + String.format("%.2f", left)
+					+ " distance: " + String.format("%05d", leftWheelCurrent - leftWheelStartPos));
+			telemetry.addData("right WHEEL", "speed: " + String.format("%.2f", right)
+					+ " distance: " + String.format("%05d", rightWheelCurrent - rightWheelStartPos));
 		}
 		else {
 			// scale the joystick value to make it easier to control
@@ -226,8 +231,13 @@ public class DryIceTeleOp extends OpMode {
 			left = ResQUtils.lookUpTableFunc(left, wheelPowerLUT);
 
 			// move wheels
-			motorBottomRight.setPower(right);
-			motorBottomLeft.setPower(left);
+            moveLeftWheelByPower(left);
+			moveRightWheelByPower(right);
+			// logging
+			telemetry.addData("left WHEEL ", "pwr: " + String.format("%.2f", left)
+					+ " distance: " + String.format("%05d", leftWheelCurrent - leftWheelStartPos));
+			telemetry.addData("right WHEEL", "pwr: " + String.format("%.2f", right)
+					+ " distance: " + String.format("%05d", rightWheelCurrent - rightWheelStartPos));
 		}
 
         // move arms
@@ -237,7 +247,7 @@ public class DryIceTeleOp extends OpMode {
         float leftArm = throttleArm + directionArm;
 
 		// load position
-		if (gamepad1.left_bumper || gamepad2.left_bumper) {
+		if (gamepad1.left_bumper) {
 			if (leftArmHoldPosition == 0){
 				leftArmHoldPosition = leftArmLastPos;
 			}
@@ -253,7 +263,7 @@ public class DryIceTeleOp extends OpMode {
 							+ " pos: " + String.format("%05d", leftArmLastPos));
 		}
 
-		if (gamepad1.right_bumper || gamepad2.right_bumper) {
+		if (gamepad1.right_bumper) {
 			if (rightArmHoldPosition ==0) {
 				rightArmHoldPosition = rightArmLastPos;
 			}
@@ -270,7 +280,7 @@ public class DryIceTeleOp extends OpMode {
 		}
 
 		// scooper
-		if (gamepad1.x || gamepad2.x) {
+		if (gamepad1.x) {
             scooper.setPosition(scooperMin);
 		} else {
             scooper.setPosition(scooperMax);
@@ -288,9 +298,10 @@ public class DryIceTeleOp extends OpMode {
 		{
 			elevator.setPosition(elevatorStopPosition);
 		}
+		telemetry.addData("SCOOPER", "pos: " + String.format("%.2g", scooper.getPosition()));
 
 		// dumper
-		if (gamepad1.y || gamepad2.y) {
+		if (gamepad1.y) {
 			dumper.setPosition(dumperUnloadPosition);
 		} else if (gamepad1.right_trigger >= 0.01) {
 			dumper.setPosition(ResQUtils.lookUpTableFunc(gamepad1.right_trigger, dumperPosLUT));
@@ -298,17 +309,9 @@ public class DryIceTeleOp extends OpMode {
 		else {
 			dumper.setPosition(dumperLoadPosition);
 		}
+		telemetry.addData("DUMPER", "pos: " + String.format("%.2g", scooper.getPosition()));
 
-		leftWheelCurrent = motorBottomLeft.getCurrentPosition();
-		rightWheelCurrent = motorBottomLeft.getCurrentPosition();
-
-        // logging
-        telemetry.addData("left WHEEL ", "pwr: " + String.format("%.2f", left)
-				+ " distance: " + String.format("%05d", leftWheelCurrent-leftWheelStartPos));
-        telemetry.addData("right WHEEL", "pwr: " + String.format("%.2f", right)
-				+ " distance: " + String.format("%05d", rightWheelCurrent-rightWheelStartPos));
-		telemetry.addData("scooper", "pos: " + String.format("%.2g", scooper.getPosition()));
-    }
+	}
 
 	/*
 	 * Code to run when the op mode is first disabled goes here
@@ -393,6 +396,15 @@ public class DryIceTeleOp extends OpMode {
 	void moveRightWheelByEncoder(int pos, float power){
 		motorBottomRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
 		motorBottomRight.setTargetPosition(pos);
+		motorBottomRight.setPower(power);
+	}
+
+	void moveLeftWheelByPower(float power) {
+		motorBottomLeft.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+		motorBottomLeft.setPower(power);
+	}
+	void moveRightWheelByPower(float power) {
+		motorBottomRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
 		motorBottomRight.setPower(power);
 	}
 

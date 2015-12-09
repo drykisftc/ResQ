@@ -187,8 +187,8 @@ public class ResQTeleOp extends OpMode {
 		// load position
 		if (gamepad1.dpad_down)
 		{
-            motorTopLeft.setChannelMode(DcMotorController.RunMode.RUN_TO_POSITION);
-            motorTopRight.setChannelMode(DcMotorController.RunMode.RUN_TO_POSITION);
+            motorTopLeft.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
+            motorTopRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
 			motorTopLeft.setTargetPosition(leftArmLoadPosition);
 			motorTopRight.setTargetPosition(rightArmLoadPosition);
 			telemetry.addData("load debris",
@@ -196,8 +196,8 @@ public class ResQTeleOp extends OpMode {
 							+ " right:"+String.format("%05d", rightArmLoadPosition));
 		} else if (gamepad1.dpad_right) // unload position
 		{
-            motorTopLeft.setChannelMode(DcMotorController.RunMode.RUN_TO_POSITION);
-            motorTopRight.setChannelMode(DcMotorController.RunMode.RUN_TO_POSITION);
+            motorTopLeft.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
+            motorTopRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
 			motorTopLeft.setTargetPosition(leftArmUnloadPosition);
 			motorTopRight.setTargetPosition(rightArmUnloadPosition);
 			telemetry.addData("Unload debris",
