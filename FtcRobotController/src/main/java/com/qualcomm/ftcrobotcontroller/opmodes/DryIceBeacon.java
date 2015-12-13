@@ -44,7 +44,7 @@ import java.util.Queue;
  * <p>
  * Enables control of the robot via the gamepad
  */
-public class DryIceBeacon extends ResQAuto {
+public class DryIceBeacon extends DryIceAuto {
 
     @Override
     public void init() {

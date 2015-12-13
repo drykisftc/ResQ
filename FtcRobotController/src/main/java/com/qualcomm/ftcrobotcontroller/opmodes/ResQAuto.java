@@ -154,7 +154,7 @@ public class ResQAuto extends ResQTeleOp {
 
         state = 0;
         telemetry.addData("TEAM", "Team color:" + teamColor);
-        telemetry.addData("STATE", "state: Init done");
+        telemetry.addData("STATE", "stateDryIce: Init done");
         //currentGyro = getGyroHeading();
         //upateRotationData();
         ResQUtils.getGyroData(sensorGyro, gyroData);
@@ -182,7 +182,7 @@ public class ResQAuto extends ResQTeleOp {
         refYRotation = gyroData.yRotation;
         refZRotation = gyroData.zRotation;
 
-        // set the next state
+        // set the next stateDryIce
         targetAngle = currentGyro;
         telemetry.addData("GYRO", "GYRO: " + String.format("%03d", targetAngle)
                 + " (" + String.format("%03d", currentGyro)
@@ -284,7 +284,7 @@ public class ResQAuto extends ResQTeleOp {
             motorBottomRight.setPower(0);
             motorBottomLeft.setPower(0);
             lastStateTimeStamp = System.currentTimeMillis();
-            // set the next state
+            // set the next stateDryIce
             if (teamColor == 'b') {
                 telemetry.addData("STATE", ": Turning right...");
                 targetAngle = normalizeAngle(targetAngle - 90);

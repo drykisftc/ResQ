@@ -31,25 +31,97 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 package com.qualcomm.ftcrobotcontroller.opmodes;
 
-import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotorController;
-import com.qualcomm.robotcore.hardware.GyroSensor;
-import com.qualcomm.robotcore.hardware.OpticalDistanceSensor;
-import com.qualcomm.robotcore.util.Range;
-
-import java.util.Queue;
 
 /**
  * Auto Mode
  * <p>
  * Enables control of the robot via the gamepad
  */
-public class DryIceRamp extends ResQAuto {
+public class DryIceRamp extends DryIceAuto {
+
+    int startLineToRampDistance = 6000;
+    long startLinetoRampTime = 5000; // 5 seconds
+    int climbSpeed = 100;
+    float climbPower = 1.0f;
+    long turnStartTime =0;
+    int turnStartDistance= 0;
+    long crutchStartTime = 6000;
+    int crutchStartDistance = 1000;
 
     @Override
     public void init() {
         super.init();
         teamColor = 'b';
+    }
+
+    public void loop() {
+
+        if (System.currentTimeMillis() - startTime > timeBudget) {
+            stop();
+        } else {
+            prevGyro = currentGyro;
+
+            leftWheelCurrent = motorBottomLeft.getCurrentPosition();
+            rightWheelCurrent = motorBottomLeft.getCurrentPosition();
+
+            //currentGyro = getGyroHeading();
+            //upateRotationData();
+            ResQUtils.getGyroData(sensorGyro, gyroData);
+            currentGyro = gyroData.heading;
+            telemetry.addData("GYRO", "GYRO: " + String.format("%03d", targetAngle)
+                    + " (" + String.format("%03d", currentGyro)
+                    + " ," + String.format("%03d", gyroData.xRotation)
+                    + " ," + String.format("%03d", gyroData.yRotation)
+                    + " ," + String.format("%03d", gyroData.zRotation)+")");
+            telemetry.addData("DISTANCE", "Left:" + String.format("%05d", leftWheelCurrent-leftWheelStartPos)
+                    + ". Right:" + String.format("%05d", rightWheelCurrent-rightWheelStartPos));
+            switch (stateDryIce) {
+                case 0:
+                    // go straight
+                    stateDryIce = goStraight(0,1,cruisePower, startLineToRampDistance, startLinetoRampTime);
+                    break;
+                case 1:
+                    // turn
+                    stateDryIce = turn(1, 2, turnPower, currentGyro, targetAngle);
+                    if (stateDryIce == 2) {
+                        turnStartTime = System.currentTimeMillis();
+                        turnStartDistance = Math.min(leftWheelCurrent-leftWheelStartPos, rightWheelCurrent-rightWheelStartPos);
+                    }
+                    break;
+                case 2:
+                    stateDryIce = climbRamp();
+                    break;
+                case 3:
+                    stateDryIce = holdPosition();
+                    break;
+                default:
+                    stop();
+                    // error
+            }
+        }
+    }
+
+    int climbRamp() {
+        int retCode = 2;
+        maintainAngleByEncoder(targetAngle,currentGyro,climbSpeed,climbPower);
+        if (System.currentTimeMillis() - turnStartTime > crutchStartTime
+                || getOdometer() - turnStartDistance > crutchStartDistance)
+        {
+            // deploy crutch
+        }
+        //retCode = 3;
+        return retCode;
+    }
+
+    int holdPosition() {
+        motorBottomLeft.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
+        motorBottomLeft.setTargetPosition(motorBottomLeft.getCurrentPosition());
+        motorBottomLeft.setPower(0.05);
+        motorBottomRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
+        motorBottomRight.setTargetPosition(motorBottomRight.getCurrentPosition());
+        motorBottomRight.setPower(0.05);
+        return 3;
     }
 }
 

@@ -44,8 +44,8 @@ public class PushBotManual extends PushBotTelemetry
     // loop
     //
     /**
-     * Implement a state machine that controls the robot during
-     * manual-operation.  The state machine uses gamepad input to transition
+     * Implement a stateDryIce machine that controls the robot during
+     * manual-operation.  The stateDryIce machine uses gamepad input to transition
      * between states.
      *
      * The system calls this member repeatedly while the OpMode is running.

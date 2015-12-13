@@ -74,7 +74,7 @@ public class DryIceTeleOp extends OpMode {
 	int leftArmHoldPosition = 0;
 	float rigthtArmHoldPower = 0.99f;
 	int rightArmHoldPosition =0;
-	float leftArmParkPower = 0.05f;
+	float leftArmParkPower = 0.01f;
 	float rightArmParkPower = 0.1f;
 	int armJammedLimit = 30;
 
@@ -82,9 +82,9 @@ public class DryIceTeleOp extends OpMode {
 	Servo scooper;
 	float scooperDelta = 0.1f;
 	float scooperPosition = 0.1f;
-	float scooperParkingPos = 0.9f;
-	float scooperMin = 0.1f;
-	float scooperMax = 0.9f;
+	float scooperMin = 0.01f;
+	float scooperMax = 0.4f;
+	float scooperParkingPos = scooperMax;
 
 	// elevator
 	Servo elevator;
@@ -94,11 +94,11 @@ public class DryIceTeleOp extends OpMode {
 
 	// dumper
 	Servo dumper;
-	float[] dumperPosLUT = { 0.88f, 0.85f, 0.80f, 0.75f, 0.70f, 0.65f, 0.60f,
-			0.55f, 0.50f, 0.45f, 0.40f, 0.25f, 0.2f, 0.15f, 0.1f, 0.05f, 0.0f};
+	//float[] dumperPosLUT = { 0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f};
+	float[] dumperPosLUT = { 0.99f, 0.95f, 0.9f, 0.88f, 0.85f, 0.80f, 0.75f, 0.70f, 0.65f, 0.6f};
 	float dumperLoadPosition = dumperPosLUT[0];
 	float dumperUnloadPosition = dumperPosLUT[dumperPosLUT.length-1];
-	float dumperParkPostion= dumperLoadPosition;
+	float dumperParkPosition = dumperLoadPosition;
 
 	float[] wheelPowerLUT = {0.0f, 0.05f, 0.15f, 0.18f, 0.20f,
 			0.22f, 0.24f, 0.26f, 0.28f, 0.30f, 0.32f, 0.34f, 0.36f,
@@ -178,7 +178,7 @@ public class DryIceTeleOp extends OpMode {
 
         scooper.setPosition(scooperParkingPos);
 		elevator.setPosition(elevatorStopPosition);
-		dumper.setPosition(dumperParkPostion);
+		dumper.setPosition(dumperParkPosition);
 
 		leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
 		rightWheelStartPos = motorBottomRight.getCurrentPosition();
@@ -299,9 +299,9 @@ public class DryIceTeleOp extends OpMode {
 
 		// scooper
 		if (gamepad1.x) {
-            scooper.setPosition(scooperMin);
-		} else {
             scooper.setPosition(scooperMax);
+		} else {
+            scooper.setPosition(scooperMin);
 		}
 
 		// elevator
@@ -327,7 +327,7 @@ public class DryIceTeleOp extends OpMode {
 		else {
 			dumper.setPosition(dumperLoadPosition);
 		}
-		telemetry.addData("DUMPER", "pos: " + String.format("%.2g", scooper.getPosition()));
+		telemetry.addData("DUMPER", "pos: " + String.format("%.2g", dumper.getPosition()));
 
 	}
 
