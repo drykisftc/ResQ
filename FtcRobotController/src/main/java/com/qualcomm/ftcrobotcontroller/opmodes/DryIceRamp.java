@@ -46,7 +46,9 @@ public class DryIceRamp extends DryIceAuto {
     float climbPower = 1.0f;
     long turnStartTime =0;
     int turnStartDistance= 0;
-    long crutchStartTime = 6000;
+    long crutchStartTime = 3000;
+    long crutchStopTime = 8000;
+
     int crutchStartDistance = 1000;
 
     @Override
@@ -80,6 +82,17 @@ public class DryIceRamp extends DryIceAuto {
                 case 0:
                     // go straight
                     stateDryIce = goStraight(0,1,cruisePower, startLineToRampDistance, startLinetoRampTime);
+
+                    if ( 1 == stateDryIce ) {
+                        // set the next stateDryIce
+                        if (teamColor == 'b') {
+                            telemetry.addData("STATE", ": Turning right...");
+                            targetAngle = normalizeAngle(targetAngle - 90);
+                        } else {
+                            telemetry.addData("STATE", ": Turning left...");
+                            targetAngle = normalizeAngle(targetAngle + 90);
+                        }
+                    }
                     break;
                 case 1:
                     // turn
@@ -105,12 +118,26 @@ public class DryIceRamp extends DryIceAuto {
     int climbRamp() {
         int retCode = 2;
         maintainAngleByEncoder(targetAngle,currentGyro,climbSpeed,climbPower);
-        if (System.currentTimeMillis() - turnStartTime > crutchStartTime
+        long elapse = System.currentTimeMillis() - turnStartTime;
+        if ( elapse> crutchStartTime
                 || getOdometer() - turnStartDistance > crutchStartDistance)
         {
+            // relax right arm
+            motorTopRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+            motorTopRight.setPower(0.0);
+
             // deploy crutch
+            if (elapse < crutchStopTime) {
+                elevator.setPosition(elevatorUpPosition);
+            }
+            else {
+                elevator.setPosition(elevatorStopPosition);
+            }
         }
-        //retCode = 3;
+
+        if ( elapse > timeBudget) {
+            retCode = 3;
+        }
         return retCode;
     }
 

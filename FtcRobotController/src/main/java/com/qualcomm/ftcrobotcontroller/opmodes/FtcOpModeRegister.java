@@ -59,10 +59,10 @@ public class FtcOpModeRegister implements OpModeRegister {
     manager.register("DryIceTeleOp", DryIceTeleOp.class);
     manager.register("DryIceAutoBlue", DryIceAutoBlue.class);
     manager.register("DryIceAutoRed", DryIceAutoRed.class);
-//    manager.register("DryIceBeaconBlue", DryIceBeaconBlue.calss);
-//    manager.register("DryIceBeaconRed", DryIceBeaconRed.calss);
-//    manager.register("DryIceRampBlue", DryIceRampBlue.calss);
-//    manager.register("DryIceRampBlue", DryIceRampRed.calss);
+    manager.register("DryIceBeaconBlue", DryIceBeaconBlue.class);
+    manager.register("DryIceBeaconRed", DryIceBeaconRed.class);
+    manager.register("DryIceRampBlue", DryIceRampBlue.class);
+    manager.register("DryIceRampRed", DryIceRampRed.class);
 
     manager.register ("ResQTeleOp", ResQTeleOp.class);
     manager.register("ResQAutoBlue", ResQAutoBlue.class);

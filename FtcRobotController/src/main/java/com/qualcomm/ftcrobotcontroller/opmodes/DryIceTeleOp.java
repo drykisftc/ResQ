@@ -83,8 +83,8 @@ public class DryIceTeleOp extends OpMode {
 	float scooperDelta = 0.1f;
 	float scooperPosition = 0.1f;
 	float scooperMin = 0.01f;
-	float scooperMax = 0.4f;
-	float scooperParkingPos = scooperMax;
+	float scooperMax = 0.99f;
+	float scooperParkingPos = scooperMin;
 
 	// elevator
 	Servo elevator;
@@ -95,7 +95,8 @@ public class DryIceTeleOp extends OpMode {
 	// dumper
 	Servo dumper;
 	//float[] dumperPosLUT = { 0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f};
-	float[] dumperPosLUT = { 0.99f, 0.95f, 0.9f, 0.88f, 0.85f, 0.80f, 0.75f, 0.70f, 0.65f, 0.6f};
+	float[] dumperPosLUT = { 0.99f, 0.95f, 0.9f, 0.88f, 0.85f, 0.80f, 0.75f,
+			0.70f, 0.65f, 0.6f, 0.55f, 0.5f};
 	float dumperLoadPosition = dumperPosLUT[0];
 	float dumperUnloadPosition = dumperPosLUT[dumperPosLUT.length-1];
 	float dumperParkPosition = dumperLoadPosition;
@@ -252,11 +253,20 @@ public class DryIceTeleOp extends OpMode {
         // move arms
         float throttleArm = -gamepad1.right_stick_y;
         float directionArm = gamepad1.right_stick_x;
+
+		float throttleArm2 = -gamepad2.right_stick_y;
+		float directionArm2 = gamepad2.right_stick_x;
+
+		if (Math.abs(throttleArm2) > 0.02 || Math.abs(directionArm) > 0.02) {
+			throttleArm = throttleArm2;
+			directionArm = directionArm2;
+		}
+
         float rightArm = throttleArm - directionArm;
         float leftArm = throttleArm + directionArm;
 
 		// load position
-		if (gamepad1.left_bumper) {
+		if (gamepad1.left_bumper || gamepad2.left_bumper) {
 			if (leftArmHoldPosition == 0){
 				leftArmHoldPosition = leftArmLastPos;
 			}
@@ -265,7 +275,7 @@ public class DryIceTeleOp extends OpMode {
 			leftArmHoldPosition = 0;
 			leftArm = Range.clip(leftArm, -1, 1);
 
-			if (gamepad1.right_stick_button) {
+			if (gamepad1.right_stick_button || gamepad2.right_stick_button) {
 				leftArm = ResQUtils.lookUpTableFunc(leftArm, armPowerLUT) * leftArmPowerScale;
 				leftArmLastPos = moveLeftArm(leftArm, !gamepad1.b);
 			} else  {
@@ -277,7 +287,7 @@ public class DryIceTeleOp extends OpMode {
 							+ " pos: " + String.format("%05d", leftArmLastPos));
 		}
 
-		if (gamepad1.right_bumper) {
+		if (gamepad1.right_bumper || gamepad2.right_bumper) {
 			if (rightArmHoldPosition ==0) {
 				rightArmHoldPosition = rightArmLastPos;
 			}
@@ -286,7 +296,7 @@ public class DryIceTeleOp extends OpMode {
 			rightArmHoldPosition = 0;
 			rightArm = Range.clip(rightArm, -1, 1);
 
-			if (gamepad1.right_stick_button) {
+			if (gamepad1.right_stick_button || gamepad2.right_stick_button) {
 				rightArm = ResQUtils.lookUpTableFunc(rightArm, armPowerLUT) * rightArmPowerScale;
 				rightArmLastPos = moveRightArm(rightArm, !gamepad1.b);
 			} else {
@@ -298,7 +308,7 @@ public class DryIceTeleOp extends OpMode {
 		}
 
 		// scooper
-		if (gamepad1.x) {
+		if (gamepad1.x || gamepad2.x) {
             scooper.setPosition(scooperMax);
 		} else {
             scooper.setPosition(scooperMin);
@@ -319,7 +329,7 @@ public class DryIceTeleOp extends OpMode {
 		telemetry.addData("SCOOPER", "pos: " + String.format("%.2g", scooper.getPosition()));
 
 		// dumper
-		if (gamepad1.y) {
+		if (gamepad1.y || gamepad2.y) {
 			dumper.setPosition(dumperUnloadPosition);
 		} else if (gamepad1.right_trigger >= 0.01) {
 			dumper.setPosition(ResQUtils.lookUpTableFunc(gamepad1.right_trigger, dumperPosLUT));
@@ -460,31 +470,4 @@ public class DryIceTeleOp extends OpMode {
 		motorBottomRight.setPower(power);
 	}
 
-//    int moveLeftArmDeltaPosition(float delta, int maxDelta)
-//    {
-//        int armCurrent = motorTopLeft.getCurrentPosition();
-//        int nextPosition = scaleInputArmPositionDelta(delta, maxDelta) + armCurrent;
-//        if (nextPosition > leftArmUpperLimit && nextPosition < leftArmLowerLimit ) {
-//            motorTopLeft.setTargetPosition(nextPosition);
-//            leftArmLastReqPos = nextPosition;
-//        }
-//        else {
-//            moveLeftArm(delta);
-//        }
-//        return armCurrent;
-//    }
-//
-//    int moveRightArmDeltaPosition(float delta, int maxDelta)
-//    {
-//        int rightArmCurrent = motorTopRight.getCurrentPosition();
-//        int nextPosition = scaleInputArmPositionDelta(delta, maxDelta) + rightArmCurrent;
-//        if (nextPosition > rightArmUpperLimit && nextPosition < rightArmLowerLimit ) {
-//            motorTopRight.setTargetPosition(nextPosition);
-//            rightArmLastReqPos = nextPosition;
-//        }
-//        else {
-//            moveRightArm(delta);
-//        }
-//        return rightArmCurrent;
-//    }
 }
