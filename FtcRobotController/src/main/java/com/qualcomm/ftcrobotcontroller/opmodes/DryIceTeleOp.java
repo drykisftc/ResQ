@@ -208,6 +208,14 @@ public class DryIceTeleOp extends OpMode {
 		float throttle  = -gamepad1.left_stick_y;
 		float direction = gamepad1.left_stick_x;
 
+		float throttle2  = -gamepad2.left_stick_y;
+		float direction2 = gamepad2.left_stick_x;
+
+		if (Math.abs(throttle2) > 0.02 || Math.abs(direction2) > 0.02) {
+			throttle = throttle2;
+			direction = direction2;
+		}
+
 		// driving power
 		float right = throttle - direction;
 		float left = throttle + direction;
