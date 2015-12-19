@@ -70,9 +70,9 @@ public class DryIceTeleOp extends OpMode {
 	float rightArmPowerScale;
 	int armMaxDelta = 3;
 
-	float leftArmHoldPower = 0.99f;
+	float leftArmHoldPower = 0.25f;
 	int leftArmHoldPosition = 0;
-	float rigthtArmHoldPower = 0.99f;
+	float rightArmHoldPower = 0.5f;
 	int rightArmHoldPosition =0;
 	float leftArmParkPower = 0.01f;
 	float rightArmParkPower = 0.1f;
@@ -95,8 +95,8 @@ public class DryIceTeleOp extends OpMode {
 	// dumper
 	Servo dumper;
 	//float[] dumperPosLUT = { 0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f};
-	float[] dumperPosLUT = { 0.99f, 0.95f, 0.9f, 0.88f, 0.85f, 0.80f, 0.75f,
-			0.70f, 0.65f, 0.6f, 0.55f, 0.5f};
+	float[] dumperPosLUT = { 0.95f, 0.9f, 0.88f, 0.85f, 0.80f, 0.75f,
+			0.70f, 0.65f, 0.6f, 0.55f, 0.5f, 0.45f, 0.4f };
 	float dumperLoadPosition = dumperPosLUT[0];
 	float dumperUnloadPosition = dumperPosLUT[dumperPosLUT.length-1];
 	float dumperParkPosition = dumperLoadPosition;
@@ -195,6 +195,12 @@ public class DryIceTeleOp extends OpMode {
 	@Override
 	public void loop() {
 
+		boolean debug = false;
+		if (gamepad1.y || gamepad2.y)
+		{
+			debug = true;
+		}
+
 		/*
 		 * Gamepad 1
 		 *
@@ -211,7 +217,8 @@ public class DryIceTeleOp extends OpMode {
 		float throttle2  = -gamepad2.left_stick_y;
 		float direction2 = gamepad2.left_stick_x;
 
-		if (Math.abs(throttle2) > 0.02 || Math.abs(direction2) > 0.02) {
+		// gamepad 1 is primary
+		if (Math.abs(throttle2) > 0.05 || Math.abs(direction2) > 0.05) {
 			throttle = throttle2;
 			direction = direction2;
 		}
@@ -227,7 +234,7 @@ public class DryIceTeleOp extends OpMode {
 		leftWheelCurrent = motorBottomLeft.getCurrentPosition();
 		rightWheelCurrent = motorBottomRight.getCurrentPosition();
 
-		if ((gamepad1.left_stick_button || gamepad1.a)
+		if ((gamepad1.left_stick_button || gamepad1.a || gamepad2.a )
 				&& (Math.abs(left)>=0.02 || Math.abs(right) >=0.02) )
 		{
 			// traction control mode
@@ -236,11 +243,13 @@ public class DryIceTeleOp extends OpMode {
 			moveLeftWheelByEncoder((int)(leftWheelCurrent + leftSpeed), leftWheelTractionControlPower);
 			moveRightWheelByEncoder((int)(rightWheelCurrent + rightSpeed), rightWheelTractionControlPower);
 
-			// logging
-			telemetry.addData("left WHEEL ", "speed: " + String.format("%.2f", leftSpeed)
-					+ " distance: " + String.format("%05d", leftWheelCurrent - leftWheelStartPos));
-			telemetry.addData("right WHEEL", "speed: " + String.format("%.2f", rightSpeed)
-					+ " distance: " + String.format("%05d", rightWheelCurrent - rightWheelStartPos));
+			if (debug) {
+				// logging
+				telemetry.addData("left WHEEL ", "speed: " + String.format("%.2f", leftSpeed)
+						+ " distance: " + String.format("%05d", leftWheelCurrent - leftWheelStartPos));
+				telemetry.addData("right WHEEL", "speed: " + String.format("%.2f", rightSpeed)
+						+ " distance: " + String.format("%05d", rightWheelCurrent - rightWheelStartPos));
+			}
 		}
 		else {
 			// scale the joystick value to make it easier to control
@@ -251,21 +260,23 @@ public class DryIceTeleOp extends OpMode {
 			// move wheels
             moveLeftWheelByPower(left);
 			moveRightWheelByPower(right);
-			// logging
-			telemetry.addData("left WHEEL ", "pwr: " + String.format("%.2f", left)
-					+ " distance: " + String.format("%05d", leftWheelCurrent - leftWheelStartPos));
-			telemetry.addData("right WHEEL", "pwr: " + String.format("%.2f", right)
-					+ " distance: " + String.format("%05d", rightWheelCurrent - rightWheelStartPos));
+			if (debug) {
+				// logging
+				telemetry.addData("left WHEEL ", "pwr: " + String.format("%.2f", left)
+						+ " distance: " + String.format("%05d", leftWheelCurrent - leftWheelStartPos));
+				telemetry.addData("right WHEEL", "pwr: " + String.format("%.2f", right)
+						+ " distance: " + String.format("%05d", rightWheelCurrent - rightWheelStartPos));
+			}
 		}
 
-        // move arms
-        float throttleArm = -gamepad1.right_stick_y;
-        float directionArm = gamepad1.right_stick_x;
+        // move arms, gamepad2 is the primary
+        float throttleArm = -gamepad2.right_stick_y;
+        float directionArm = gamepad2.right_stick_x;
 
-		float throttleArm2 = -gamepad2.right_stick_y;
-		float directionArm2 = gamepad2.right_stick_x;
+		float throttleArm2 = -gamepad1.right_stick_y;
+		float directionArm2 = gamepad1.right_stick_x;
 
-		if (Math.abs(throttleArm2) > 0.02 || Math.abs(directionArm) > 0.02) {
+		if (Math.abs(throttleArm2) > 0.1 || Math.abs(directionArm) > 0.1) {
 			throttleArm = throttleArm2;
 			directionArm = directionArm2;
 		}
@@ -290,9 +301,11 @@ public class DryIceTeleOp extends OpMode {
 				leftArmLastPos = moveLeftArmByEncoder(leftArm, !gamepad1.b);
 			}
 
-			telemetry.addData("left ARM ",
-					"pwr: " + String.format("%.2f", leftArm)
-							+ " pos: " + String.format("%05d", leftArmLastPos));
+			if (debug) {
+				telemetry.addData("left ARM ",
+						"pwr: " + String.format("%.2f", leftArm)
+								+ " pos: " + String.format("%05d", leftArmLastPos));
+			}
 		}
 
 		if (gamepad1.right_bumper || gamepad2.right_bumper) {
@@ -310,9 +323,11 @@ public class DryIceTeleOp extends OpMode {
 			} else {
 				rightArmLastPos = moveRightArmByEncoder(rightArm, !gamepad1.b);
 			}
-			telemetry.addData("right ARM ",
-					"pwr: " + String.format("%.2f", rightArm)
-							+ "pos: " + String.format("%05d", rightArmLastPos));
+			if (debug) {
+				telemetry.addData("right ARM ",
+						"pwr: " + String.format("%.2f", rightArm)
+								+ "pos: " + String.format("%05d", rightArmLastPos));
+			}
 		}
 
 		// scooper
@@ -334,19 +349,20 @@ public class DryIceTeleOp extends OpMode {
 		{
 			elevator.setPosition(elevatorStopPosition);
 		}
-		telemetry.addData("SCOOPER", "pos: " + String.format("%.2g", scooper.getPosition()));
+
+		if (debug) {
+			telemetry.addData("SCOOPER", "pos: " + String.format("%.2g", scooper.getPosition()));
+		}
 
 		// dumper
-		if (gamepad1.y || gamepad2.y) {
-			dumper.setPosition(dumperUnloadPosition);
-		} else if (gamepad1.right_trigger >= 0.01) {
-			dumper.setPosition(ResQUtils.lookUpTableFunc(gamepad1.right_trigger, dumperPosLUT));
-		}
-		else {
-			dumper.setPosition(dumperLoadPosition);
-		}
-		telemetry.addData("DUMPER", "pos: " + String.format("%.2g", dumper.getPosition()));
+		float dumperPos = gamepad1.right_trigger;
+		float dumperPos2 = gamepad2.right_trigger;
+		dumperPos = Math.max(dumperPos, dumperPos2);
+		dumper.setPosition(ResQUtils.lookUpTableFunc(dumperPos, dumperPosLUT));
 
+		if (debug) {
+			telemetry.addData("DUMPER", "pos: " + String.format("%.2g", dumper.getPosition()));
+		}
 	}
 
 	/*
@@ -454,7 +470,7 @@ public class DryIceTeleOp extends OpMode {
     {
         motorTopRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
         motorTopRight.setTargetPosition(pos);
-		motorTopRight.setPower(rigthtArmHoldPower);
+		motorTopRight.setPower(rightArmHoldPower);
     }
 
 	void moveLeftWheelByEncoder(int pos, float power){

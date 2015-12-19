@@ -57,7 +57,7 @@ public class DryIceAuto extends DryIceTeleOp {
 
     boolean enableLED = true;
 
-    float colorSensitivity = 1.5f;
+    float colorSensitivity = 1.25f;
 
     char teamColor = 'b';
 
@@ -67,11 +67,11 @@ public class DryIceAuto extends DryIceTeleOp {
     long lastStateTimeStamp = 0;
 
     float cruisePower = 0.99f;
-    float searchPower = 0.6f;
+    float searchPower = 0.5f;
     float turnPower = 0.4f;
 
-    int collisionDistThreshold = 20;
-    int minColorBrightness = 3;
+    int collisionDistThreshold = 50;
+    int minColorBrightness = 8;
     TurnData prevTurnData;
     double prevTurnPower = 0.0;
 
@@ -80,24 +80,29 @@ public class DryIceAuto extends DryIceTeleOp {
     int currentGyro = 0;
     int targetAngle = 0;
     int targetAngleTolerance = 2;
-    float[] angle2PowerLUT = {0.0f, 0.05f, 0.1f, 0.15f, 0.2f, 0.25f, 0.3f, 0.35f, 0.4f, 0.5f, 0.6f};
+    float[] angle2PowerLUT = {0.0005f, 0.01f, 0.02f, 0.03f, 0.04f, 0.05f,
+                              0.06f, 0.07f, 0.08f, 0.09f, 0.1f,  0.11f,
+                              0.12f, 0.13f, 0.14f, 0.15f, 0.16f, 0.17f,
+                              0.18f,0.19f, 0.2f, 0.21f, 0.22f, 0.23f,
+                              0.24f,0.25f, 0.275f, 0.3f, 0.325f, 0.35f,
+                              0.375f, 0.4f, 0.425f, 0.45f, 0.5f, 0.6f};
     float[] angle2DistanceLUT = {0.00f, 5.1f, 10.15f, 15.2f, 20.25f, 30.3f, 40.35f, 50.4f};
     float lastSkew =0;
     float skewPowerScale = 1.0f;
-    float skewPowerGain = 1.09f;
+    float skewPowerGain = 1.19f;
 
     GyroData gyroData;
     int refXRotation = 0;
     int refYRotation = 0;
     int refZRotation = 0;
 
-    RGB rgb= new RGB(0,0,0);;
+    RGB rgb= new RGB(0,0,0);
 
     Queue<TurnData> turnDataFIFO;
 
-    int StarLineToCenterLineDistance = 15000;
-    int CenterlineToBeaconLineDistance = 15000;
-    int BeaconLineToBeaconDistance = 3000;
+    int StarLineToCenterLineDistance = 11455;
+    int CenterlineToBeaconLineDistance = 5728;
+    int BeaconLineToBeaconDistance = 2864;
 
     /**
      * Constructor
@@ -230,7 +235,7 @@ public class DryIceAuto extends DryIceTeleOp {
             switch (stateDryIce) {
                 case 0:
                     // go straight
-                    stateDryIce = goStraightToCenterLine(cruisePower, 7500);
+                    stateDryIce = goStraightToCenterLine(cruisePower, 8000);
                     break;
                 case 1:
                     // turn
@@ -370,7 +375,22 @@ public class DryIceAuto extends DryIceTeleOp {
         return stateCode;
     }
 
-    int searchBeacon(double power) {
+    int searchBeacon(float power) {
+
+        int distanceLeft = sensorODSLeft.getLightDetectedRaw();
+        int distanceRight = sensorODSRight.getLightDetectedRaw();
+        telemetry.addData("STATE",
+                ": Search beacon...distance ("
+                        + String.format("%03d", distanceLeft) + ", "
+                        + String.format("%03d", distanceRight) + ") ");
+        if (distanceLeft < collisionDistThreshold
+        && distanceRight < collisionDistThreshold) {
+            return goStraight(3, 4, power, BeaconLineToBeaconDistance, 3000);
+        }
+        return 4;
+    }
+
+    int searchBeacon2(double power) {
         int stateCode = 3;
 
         // stop and take picture
@@ -541,7 +561,7 @@ public class DryIceAuto extends DryIceTeleOp {
         int distanceWheel = getOdometer();
 
         if (distanceWheel > distanceLimit
-                || color == 'b' || color == 'r'
+                || (distanceWheel > distanceLimit*0.5 && (color == 'b' || color == 'r'))
                 || System.currentTimeMillis() - startTime > timeLimit) { // time out
             // stop at the center blue/red line
             motorBottomRight.setPower(0);
