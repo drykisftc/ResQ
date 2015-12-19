@@ -53,7 +53,7 @@ public class DryIceAuto extends DryIceTeleOp {
 
     GyroSensor sensorGyro;
 
-    ResQCamera camera;
+    //ResQCamera camera;
 
     boolean enableLED = true;
 
@@ -147,7 +147,7 @@ public class DryIceAuto extends DryIceTeleOp {
 
         gyroData = new GyroData(0,0,0,0);
 
-        camera = new ResQCamera();
+        //camera = new ResQCamera();
 
         motorBottomLeft.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
         motorBottomRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
@@ -488,7 +488,7 @@ public class DryIceAuto extends DryIceTeleOp {
 
     float maintainAngle(float target, float current, double power) {
         float skew = getAngleDelta((int)current, (int)target);
-        double turn = getDeltaPowerByDeltaAngle(skew, 1.0f);
+        double turn = getDeltaPowerByDeltaAngle(skew, targetAngleTolerance*0.0056f);
 
         // increase turn power if stuck
         if ( Math.abs(skew - lastSkew) < targetAngleTolerance) {
