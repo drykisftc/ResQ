@@ -80,16 +80,16 @@ public class DryIceAuto extends DryIceTeleOp {
     int currentGyro = 0;
     int targetAngle = 0;
     int targetAngleTolerance = 2;
-    float[] angle2PowerLUT = {0.0005f, 0.01f, 0.02f, 0.03f, 0.04f, 0.05f,
-                              0.06f, 0.07f, 0.08f, 0.09f, 0.1f,  0.11f,
-                              0.12f, 0.13f, 0.14f, 0.15f, 0.16f, 0.17f,
-                              0.18f,0.19f, 0.2f, 0.21f, 0.22f, 0.23f,
-                              0.24f,0.25f, 0.275f, 0.3f, 0.325f, 0.35f,
-                              0.375f, 0.4f, 0.425f, 0.45f, 0.5f, 0.6f};
-    float[] angle2DistanceLUT = {0.00f, 5.1f, 10.15f, 15.2f, 20.25f, 30.3f, 40.35f, 50.4f};
+    float[] angle2PowerLUT = {0.00f, 0.01f, 0.015f, 0.02f, 0.025f, 0.03f, 0.035f, 0.04f, 0.045f,0.05f,
+                              0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f,
+                              0.07f, 0.07f, 0.07f, 0.07f, 0.07f, 0.07f, 0.07f, 0.07f, 0.07f, 0.07f,
+                              0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f,
+                              0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f};
+
+    float[] angle2DistanceLUT = {0.00f, 2.0f, 5.1f, 7.5f, 10.15f, 15.2f, 20.25f, 30.3f, 40.35f, 50.4f};
     float lastSkew =0;
     float skewPowerScale = 1.0f;
-    float skewPowerGain = 1.19f;
+    float skewPowerGain = 1.08f;
 
     GyroData gyroData;
     int refXRotation = 0;
@@ -101,8 +101,8 @@ public class DryIceAuto extends DryIceTeleOp {
     Queue<TurnData> turnDataFIFO;
 
     int StarLineToCenterLineDistance = 11455;
-    int CenterlineToBeaconLineDistance = 5728;
-    int BeaconLineToBeaconDistance = 2864;
+    int CenterlineToBeaconLineDistance = 3818;
+    int BeaconLineToBeaconDistance = 3818;
 
     /**
      * Constructor
@@ -239,7 +239,7 @@ public class DryIceAuto extends DryIceTeleOp {
                     break;
                 case 1:
                     // turn
-                    stateDryIce = turn(1,2,turnPower, currentGyro, targetAngle);
+                    stateDryIce = turn(1, 2, 0.0f, currentGyro, targetAngle);
                     break;
                 case 2:
                     stateDryIce = moveToBeacon(cruisePower);
@@ -315,7 +315,7 @@ public class DryIceAuto extends DryIceTeleOp {
             rightWheelStartPos = motorBottomRight.getCurrentPosition();
             return endState;
         } else {
-            maintainAngle(stopAngle, currentAngle, 0.0);
+            maintainAngle(stopAngle, currentAngle, power);
             if (teamColor == 'b') {
                 telemetry.addData("STATE", ": Turning right...");
             } else {
@@ -387,6 +387,11 @@ public class DryIceAuto extends DryIceTeleOp {
         && distanceRight < collisionDistThreshold) {
             return goStraight(3, 4, power, BeaconLineToBeaconDistance, 3000);
         }
+
+        lastStateTimeStamp = System.currentTimeMillis();
+        telemetry.addData("STATE", ": Search beacon done");
+        leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
+        rightWheelStartPos = motorBottomRight.getCurrentPosition();
         return 4;
     }
 
@@ -483,7 +488,7 @@ public class DryIceAuto extends DryIceTeleOp {
 
     float maintainAngle(float target, float current, double power) {
         float skew = getAngleDelta((int)current, (int)target);
-        double turn = getDeltaPowerByDeltaAngle(skew, 0.005f);
+        double turn = getDeltaPowerByDeltaAngle(skew, 1.0f);
 
         // increase turn power if stuck
         if ( Math.abs(skew - lastSkew) < targetAngleTolerance) {

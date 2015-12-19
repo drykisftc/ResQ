@@ -55,9 +55,12 @@ public class DryIceRamp extends DryIceAuto {
     public void init() {
         super.init();
         teamColor = 'b';
+        StarLineToCenterLineDistance = 7637;
+        CenterlineToBeaconLineDistance = 7637;
+        BeaconLineToBeaconDistance = 100;
     }
 
-    public void loop() {
+    public void loop2() {
 
         if (System.currentTimeMillis() - startTime > timeBudget) {
             stop();
@@ -115,11 +118,26 @@ public class DryIceRamp extends DryIceAuto {
         }
     }
 
+    int backup() {
+        if (teamColor == 'b') {
+            telemetry.addData("STATE", ": Turning right...");
+            targetAngle = normalizeAngle(targetAngle - 45);
+        } else {
+            telemetry.addData("STATE", ": Turning left...");
+            targetAngle = normalizeAngle(targetAngle + 45);
+        }
+        return 6;
+    }
+
+    int findRamp() {
+        return turn(6, 7, 0.0f, currentGyro, targetAngle);
+    }
+
     int climbRamp() {
         int retCode = 2;
         maintainAngleByEncoder(targetAngle,currentGyro,climbSpeed,climbPower);
         long elapse = System.currentTimeMillis() - turnStartTime;
-        if ( elapse> crutchStartTime
+        if ( elapse > crutchStartTime
                 || getOdometer() - turnStartDistance > crutchStartDistance)
         {
             // relax right arm
