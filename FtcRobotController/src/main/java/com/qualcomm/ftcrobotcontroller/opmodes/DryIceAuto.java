@@ -343,7 +343,7 @@ public class DryIceAuto extends DryIceTeleOp {
         //if ( sensorODS.getLightDetectedRaw() )
         int distanceLeft = sensorODSLeft.getLightDetectedRaw();
         int distanceRight = sensorODSRight.getLightDetectedRaw();
-        int distanceWheel = Math.min(leftWheelCurrent-leftWheelStartPos, rightWheelCurrent-rightWheelStartPos);
+        int distanceWheel = Math.min(Math.abs(leftWheelCurrent-leftWheelStartPos), Math.abs(rightWheelCurrent-rightWheelStartPos));
         char color = ResQUtils.getColor(sensorRGB, colorSensitivity, minColorBrightness,rgb);
 
         telemetry.addData("STATE",
@@ -588,7 +588,7 @@ public class DryIceAuto extends DryIceTeleOp {
     }
 
     int getOdometer() {
-        return Math.min(leftWheelCurrent-leftWheelStartPos, rightWheelCurrent-rightWheelStartPos);
+        return Math.min(Math.abs(leftWheelCurrent-leftWheelStartPos), Math.abs(rightWheelCurrent-rightWheelStartPos));
     }
 }
 
