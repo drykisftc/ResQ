@@ -100,8 +100,8 @@ public class DryIceAuto extends DryIceTeleOp {
 
     Queue<TurnData> turnDataFIFO;
 
-    int StarLineToCenterLineDistance = 11455;
-    int CenterlineToBeaconLineDistance = 3818;
+    int StarLineToCenterLineDistance = 7445;
+    int CenterlineToBeaconLineDistance = 5399;
     int BeaconLineToBeaconDistance = 3818;
 
     /**
@@ -232,37 +232,44 @@ public class DryIceAuto extends DryIceTeleOp {
                     + " ," + String.format("%03d", gyroData.zRotation)+")");
             telemetry.addData("DISTANCE", "Left:" + String.format("%05d", leftWheelCurrent-leftWheelStartPos)
                     + ". Right:" + String.format("%05d", rightWheelCurrent-rightWheelStartPos));
+            telemetry.addData("STATE", stateDryIce);
+
             switch (stateDryIce) {
                 case 0:
                     // go straight
-                    stateDryIce = goStraightToCenterLine(cruisePower, 8000);
+                    stateDryIce = goStraightToCenterLine(cruisePower, 8000); // should finish in 8 sec
                     break;
                 case 1:
                     // turn
                     stateDryIce = turn(1, 2, 0.0f, currentGyro, targetAngle);
                     break;
                 case 2:
-                    stateDryIce = moveToBeacon(cruisePower);
+                    // go straight
+                    stateDryIce = goStraightBeaconLine(2, 3, cruisePower,20000); // should finish in 20 sec
                     break;
                 case 3:
-                    // find the beacon
-                    stateDryIce = searchBeacon(searchPower);
+                    // turn
+                    stateDryIce = turn(3, 4, 0.0f, currentGyro, targetAngle);
                     break;
                 case 4:
-                    // touch the button
-                    touchButton();
+                    // find the beacon
+                    stateDryIce = searchBeacon(searchPower, 4, 5);
                     break;
                 case 5:
-                    // backup
-                    backup();
+                    // touch the button
+                    stateDryIce = touchButton(5,6);
                     break;
                 case 6:
-                    // find the ramp with correct color
-                    findRamp();
+                    // backup
+                    stateDryIce = backup(6,7);
                     break;
                 case 7:
+                    // find the ramp with correct color
+                    stateDryIce = findRamp(7,8);
+                    break;
+                case 8:
                     // climb up the ramp
-                    climbRamp();
+                    stateDryIce = climbRamp(8,9);
                     break;
                 default:
                     stop();
@@ -295,10 +302,26 @@ public class DryIceAuto extends DryIceTeleOp {
             // set the next stateDryIce
             if (teamColor == 'b') {
                 telemetry.addData("STATE", ": Turning right...");
-                targetAngle = normalizeAngle(targetAngle - 90);
+                targetAngle = normalizeAngle(targetAngle - 45);
             } else {
                 telemetry.addData("STATE", ": Turning left...");
-                targetAngle = normalizeAngle(targetAngle + 90);
+                targetAngle = normalizeAngle(targetAngle + 45);
+            }
+        }
+        return retCode;
+    }
+
+    int goStraightBeaconLine(int startState, int endState, float power, long timeLimit) {
+        int retCode = goStraight(startState, endState, power, CenterlineToBeaconLineDistance, timeLimit);
+
+        if (retCode == endState) {
+            // set the next stateDryIce
+            if (teamColor == 'b') {
+                telemetry.addData("STATE", ": Turning right...");
+                targetAngle = normalizeAngle(targetAngle - 45);
+            } else {
+                telemetry.addData("STATE", ": Turning left...");
+                targetAngle = normalizeAngle(targetAngle + 45);
             }
         }
         return retCode;
@@ -326,25 +349,13 @@ public class DryIceAuto extends DryIceTeleOp {
         return startState;
     }
 
-    int moveToBeacon(double power) {
-        int stateCode = 2;
+    int moveToBeacon(double power, int startState, int endState) {
+        int stateCode = startState;
 
-        // stop
-//        motorBottomRight.setPower(0.0);
-//        motorBottomLeft.setPower(0.0);
-//        camera.snapPicture();
-
-        // get skew angle from the camera
-
-
-        // adjust targe angle
-
-        // keep the beacon in center until ODS trigger
-        //if ( sensorODS.getLightDetectedRaw() )
         int distanceLeft = sensorODSLeft.getLightDetectedRaw();
         int distanceRight = sensorODSRight.getLightDetectedRaw();
-        int distanceWheel = Math.min(Math.abs(leftWheelCurrent-leftWheelStartPos), Math.abs(rightWheelCurrent-rightWheelStartPos));
-        char color = ResQUtils.getColor(sensorRGB, colorSensitivity, minColorBrightness,rgb);
+        int distanceWheel = Math.min(Math.abs(leftWheelCurrent - leftWheelStartPos), Math.abs(rightWheelCurrent - rightWheelStartPos));
+        char color = ResQUtils.getColor(sensorRGB, colorSensitivity, minColorBrightness, rgb);
 
         telemetry.addData("STATE",
                 ": Move toward beacon...distance ("
@@ -369,14 +380,15 @@ public class DryIceAuto extends DryIceTeleOp {
                 telemetry.addData("STATE", ": Move to beacon done");
                 leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
                 rightWheelStartPos = motorBottomRight.getCurrentPosition();
-                stateCode = 3;
+                stateCode = endState;
             }
         }
         return stateCode;
     }
 
-    int searchBeacon(float power) {
+    int searchBeacon(float power, int startState, int endState) {
 
+        int retCode = startState;
         int distanceLeft = sensorODSLeft.getLightDetectedRaw();
         int distanceRight = sensorODSRight.getLightDetectedRaw();
         telemetry.addData("STATE",
@@ -385,79 +397,41 @@ public class DryIceAuto extends DryIceTeleOp {
                         + String.format("%03d", distanceRight) + ") ");
         if (distanceLeft < collisionDistThreshold
         && distanceRight < collisionDistThreshold) {
-            return goStraight(3, 4, power, BeaconLineToBeaconDistance, 3000);
+            retCode = goStraight(startState, endState, power, BeaconLineToBeaconDistance, 30000);
         }
 
-        lastStateTimeStamp = System.currentTimeMillis();
-        telemetry.addData("STATE", ": Search beacon done");
-        leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
-        rightWheelStartPos = motorBottomRight.getCurrentPosition();
-        return 4;
-    }
-
-    int searchBeacon2(double power) {
-        int stateCode = 3;
-
-        // stop and take picture
-//        motorBottomRight.setPower(0.0);
-//        motorBottomLeft.setPower(0.0);
-//        camera.snapPicture();
-
-        // get skew angle from the camera
-
-        // get distance sensor
-        int distanceLeft = sensorODSLeft.getLightDetectedRaw();
-        int distanceRight = sensorODSRight.getLightDetectedRaw();
-        char color = ResQUtils.getColor(sensorRGB, colorSensitivity, minColorBrightness,rgb);
-
-        telemetry.addData("STATE",
-                ": Search beacon...distance ("
-                        + String.format("%03d", distanceLeft) + ", "
-                        + String.format("%03d", distanceRight) + ") ");
-        telemetry.addData("COLOR", ": " + color +
-                " r=" + String.format("%d", rgb.r) +
-                " g=" + String.format("%d", rgb.g) +
-                " b=" + String.format("%d", rgb.b));
-
-        // following color lines, searching for the white line
-        if (System.currentTimeMillis() - lastStateTimeStamp < 5500) {
-            ResQUtils.followColorLine('u', sensorRGB,
-                    colorSensitivity, minColorBrightness,
-                    motorBottomLeft, motorBottomRight, searchPower, turnPower);
-        }
-        else {
-            motorBottomRight.setPower(0.0);
-            motorBottomLeft.setPower(0.0);
+        if ( endState == retCode) {
             lastStateTimeStamp = System.currentTimeMillis();
             telemetry.addData("STATE", ": Search beacon done");
-            stateCode = 4;
+            leftWheelStartPos = motorBottomLeft.getCurrentPosition();
+            rightWheelStartPos = motorBottomRight.getCurrentPosition();
         }
 
+        return retCode;
+    }
+
+    int touchButton(int startState, int endState) {
+        int stateCode = startState;
+        stateCode = endState;
         return stateCode;
     }
 
-    int touchButton() {
-        int stateCode = 4;
-        stateCode = 5;
+    int backup(int startState, int endState) {
+        int stateCode = startState;
+        stateCode = endState;
         return stateCode;
     }
 
-    int backup() {
-        int errorCode = 5;
-        errorCode = 6;
-        return errorCode;
+    int findRamp(int startState, int endState) {
+        int stateCode = startState;
+        stateCode = endState;
+        return stateCode;
     }
 
-    int findRamp() {
-        int errorCode = 6;
-        errorCode = 7;
-        return errorCode;
-    }
-
-    int climbRamp() {
-        int errorCode = 7;
-        errorCode = 8;
-        return errorCode;
+    int climbRamp(int startState, int endState) {
+        int stateCode = startState;
+        stateCode = endState;
+        return stateCode;
     }
 
     void turnLeft(double power) {
