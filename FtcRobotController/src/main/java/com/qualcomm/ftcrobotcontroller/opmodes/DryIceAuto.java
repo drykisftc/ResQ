@@ -237,7 +237,7 @@ public class DryIceAuto extends DryIceTeleOp {
             switch (stateDryIce) {
                 case 0:
                     // go straight
-                    stateDryIce = goStraightToCenterLine(cruisePower, 8000); // should finish in 8 sec
+                    stateDryIce = goStraightToCenterLine(0, 1, cruisePower, 8000); // should finish in 8 sec
                     break;
                 case 1:
                     // turn
@@ -295,10 +295,10 @@ public class DryIceAuto extends DryIceTeleOp {
         telemetry.addData("STATE", "Ended");
     }
 
-    int goStraightToCenterLine(float power, long timeLimit) {
-        int retCode = goStraight(0, 1, power, StarLineToCenterLineDistance, timeLimit);
+    int goStraightToCenterLine(int startState, int endState, float power, long timeLimit) {
+        int retCode = goStraight(startState, endState, power, StarLineToCenterLineDistance, timeLimit);
 
-        if (retCode == 1) {
+        if (endState == retCode) {
             // set the next stateDryIce
             if (teamColor == 'b') {
                 telemetry.addData("STATE", ": Turning right...");

@@ -55,70 +55,13 @@ public class DryIceRamp extends DryIceAuto {
     public void init() {
         super.init();
         teamColor = 'b';
-        StarLineToCenterLineDistance = 7637;
-        CenterlineToBeaconLineDistance = 7637;
+        StarLineToCenterLineDistance = 2000;
+        CenterlineToBeaconLineDistance = 5399;
         BeaconLineToBeaconDistance = 100;
     }
 
-    public void loop2() {
 
-        if (System.currentTimeMillis() - startTime > timeBudget) {
-            stop();
-        } else {
-            prevGyro = currentGyro;
-
-            leftWheelCurrent = motorBottomLeft.getCurrentPosition();
-            rightWheelCurrent = motorBottomLeft.getCurrentPosition();
-
-            //currentGyro = getGyroHeading();
-            //upateRotationData();
-            ResQUtils.getGyroData(sensorGyro, gyroData);
-            currentGyro = gyroData.heading;
-            telemetry.addData("GYRO", "GYRO: " + String.format("%03d", targetAngle)
-                    + " (" + String.format("%03d", currentGyro)
-                    + " ," + String.format("%03d", gyroData.xRotation)
-                    + " ," + String.format("%03d", gyroData.yRotation)
-                    + " ," + String.format("%03d", gyroData.zRotation)+")");
-            telemetry.addData("DISTANCE", "Left:" + String.format("%05d", leftWheelCurrent-leftWheelStartPos)
-                    + ". Right:" + String.format("%05d", rightWheelCurrent-rightWheelStartPos));
-            switch (stateDryIce) {
-                case 0:
-                    // go straight
-                    stateDryIce = goStraight(0,1,cruisePower, startLineToRampDistance, startLinetoRampTime);
-
-                    if ( 1 == stateDryIce ) {
-                        // set the next stateDryIce
-                        if (teamColor == 'b') {
-                            telemetry.addData("STATE", ": Turning right...");
-                            targetAngle = normalizeAngle(targetAngle - 90);
-                        } else {
-                            telemetry.addData("STATE", ": Turning left...");
-                            targetAngle = normalizeAngle(targetAngle + 90);
-                        }
-                    }
-                    break;
-                case 1:
-                    // turn
-                    stateDryIce = turn(1, 2, turnPower, currentGyro, targetAngle);
-                    if (stateDryIce == 2) {
-                        turnStartTime = System.currentTimeMillis();
-                        turnStartDistance = Math.min(leftWheelCurrent-leftWheelStartPos, rightWheelCurrent-rightWheelStartPos);
-                    }
-                    break;
-                case 2:
-                    stateDryIce = climbRamp();
-                    break;
-                case 3:
-                    stateDryIce = holdPosition();
-                    break;
-                default:
-                    stop();
-                    // error
-            }
-        }
-    }
-
-    int backup() {
+    int backup(int startState, int endState) {
         if (teamColor == 'b') {
             telemetry.addData("STATE", ": Turning right...");
             targetAngle = normalizeAngle(targetAngle - 45);
@@ -126,15 +69,15 @@ public class DryIceRamp extends DryIceAuto {
             telemetry.addData("STATE", ": Turning left...");
             targetAngle = normalizeAngle(targetAngle + 45);
         }
-        return 6;
+        return endState;
     }
 
-    int findRamp() {
-        return turn(6, 7, 0.0f, currentGyro, targetAngle);
+    int findRamp(int startState, int endState) {
+        return turn(startState, endState, 0.0f, currentGyro, targetAngle);
     }
 
-    int climbRamp() {
-        int retCode = 2;
+    int climbRamp(int startState, int endState) {
+        int retCode = startState;
         maintainAngleByEncoder(targetAngle,currentGyro,climbSpeed,climbPower);
         long elapse = System.currentTimeMillis() - turnStartTime;
         if ( elapse > crutchStartTime
@@ -154,7 +97,7 @@ public class DryIceRamp extends DryIceAuto {
         }
 
         if ( elapse > timeBudget) {
-            retCode = 3;
+            retCode = endState;
         }
         return retCode;
     }
