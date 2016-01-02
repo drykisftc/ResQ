@@ -6,7 +6,7 @@ package com.qualcomm.ftcrobotcontroller.opmodes;
 public class DryIceAutoRed extends DryIceAuto {
     @Override
     public void init() {
-        super.init();
         teamColor = 'r';
+        super.init();
     }
 }

@@ -70,11 +70,11 @@ public class DryIceTeleOp extends OpMode {
 	float rightArmPowerScale;
 	int armMaxDelta = 3;
 
-	float leftArmHoldPower = 0.25f;
+	float leftArmHoldPower = 0.5f;
 	int leftArmHoldPosition = 0;
-	float rightArmHoldPower = 0.5f;
+	float rightArmHoldPower = 0.15f;
 	int rightArmHoldPosition =0;
-	float leftArmParkPower = 0.01f;
+	float leftArmParkPower = 0.2f;
 	float rightArmParkPower = 0.1f;
 	int armJammedLimit = 30;
 
@@ -95,8 +95,7 @@ public class DryIceTeleOp extends OpMode {
 	// dumper
 	Servo dumper;
 	//float[] dumperPosLUT = { 0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f};
-	float[] dumperPosLUT = { 0.95f, 0.9f, 0.88f, 0.85f, 0.80f, 0.75f,
-			0.70f, 0.65f, 0.6f, 0.55f, 0.5f, 0.45f, 0.4f };
+	float[] dumperPosLUT = { 0.25f, 0.3f, 0.35f, 0.4f, 0.45f, 0.5f, 0.55f, 0.6f };
 	float dumperLoadPosition = dumperPosLUT[0];
 	float dumperUnloadPosition = dumperPosLUT[dumperPosLUT.length-1];
 	float dumperParkPosition = dumperLoadPosition;
@@ -234,13 +233,12 @@ public class DryIceTeleOp extends OpMode {
 			moveLeftWheelByEncoder((int)(leftWheelCurrent + leftSpeed), leftWheelTractionControlPower);
 			moveRightWheelByEncoder((int)(rightWheelCurrent + rightSpeed), rightWheelTractionControlPower);
 
-			if (debug) {
-				// logging
-				telemetry.addData("left WHEEL ", "speed: " + String.format("%.2f", leftSpeed)
-						+ " distance: " + String.format("%05d", leftWheelCurrent - leftWheelStartPos));
-				telemetry.addData("right WHEEL", "speed: " + String.format("%.2f", rightSpeed)
-						+ " distance: " + String.format("%05d", rightWheelCurrent - rightWheelStartPos));
-			}
+			// logging
+			telemetry.addData("left WHEEL ", "speed: " + String.format("%.2f", leftSpeed)
+					+ " distance: " + String.format("%05d", leftWheelCurrent - leftWheelStartPos));
+			telemetry.addData("right WHEEL", "speed: " + String.format("%.2f", rightSpeed)
+					+ " distance: " + String.format("%05d", rightWheelCurrent - rightWheelStartPos));
+
 		}
 		else {
 			// scale the joystick value to make it easier to control
@@ -249,15 +247,15 @@ public class DryIceTeleOp extends OpMode {
 			left = ResQUtils.lookUpTableFunc(left, wheelPowerLUT);
 
 			// move wheels
-            moveLeftWheelByPower(left);
+			moveLeftWheelByPower(left);
 			moveRightWheelByPower(right);
-			if (debug) {
-				// logging
-				telemetry.addData("left WHEEL ", "pwr: " + String.format("%.2f", left)
-						+ " distance: " + String.format("%05d", leftWheelCurrent - leftWheelStartPos));
-				telemetry.addData("right WHEEL", "pwr: " + String.format("%.2f", right)
-						+ " distance: " + String.format("%05d", rightWheelCurrent - rightWheelStartPos));
-			}
+
+			// logging
+			telemetry.addData("left WHEEL ", "pwr: " + String.format("%.2f", left)
+					+ " distance: " + String.format("%05d", leftWheelCurrent - leftWheelStartPos));
+			telemetry.addData("right WHEEL", "pwr: " + String.format("%.2f", right)
+					+ " distance: " + String.format("%05d", rightWheelCurrent - rightWheelStartPos));
+
 		}
 
         // move arms, gamepad1 is the primary
@@ -333,17 +331,12 @@ public class DryIceTeleOp extends OpMode {
 			elevator.setPosition(elevatorStopPosition);
 		}
 
-		if (debug) {
-			telemetry.addData("SCOOPER", "pos: " + String.format("%.2g", scooper.getPosition()));
-		}
+		telemetry.addData("SCOOPER", "pos: " + String.format("%.2g", scooper.getPosition()));
 
 		// dumper
 		float dumperPos = gamepad1.right_trigger;
 		dumper.setPosition(ResQUtils.lookUpTableFunc(dumperPos, dumperPosLUT));
-
-		if (debug) {
-			telemetry.addData("DUMPER", "pos: " + String.format("%.2g", dumper.getPosition()));
-		}
+		telemetry.addData("DUMPER", "pos: " + String.format("%.2g", dumper.getPosition()));
 	}
 
 	/*
