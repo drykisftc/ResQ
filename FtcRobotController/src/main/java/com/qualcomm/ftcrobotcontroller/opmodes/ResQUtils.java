@@ -2,6 +2,7 @@ package com.qualcomm.ftcrobotcontroller.opmodes;
 
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorController;
 import com.qualcomm.robotcore.hardware.GyroSensor;
 import com.qualcomm.robotcore.robocol.Telemetry;
 import com.qualcomm.robotcore.util.Range;
@@ -76,14 +77,14 @@ public class ResQUtils {
                                float powerForward,
                                float powerTurn) {
         RGB rgb = new RGB(0,0,0);
-        char color = getColor(cs,snrLimit,minBrightness,rgb);
+        char color = getColor(cs, snrLimit, minBrightness, rgb);
 
         int intensity = rgb.getIntensity();
 
         if ( color != colorFollowed || intensity < minBrightness)
         {
             left.setPower(Range.clip(powerForward+powerTurn,-1,1));
-            right.setPower(Range.clip(powerForward - powerTurn,-1,1));
+            right.setPower(Range.clip(powerForward - powerTurn, -1, 1));
         }
         else {
             left.setPower(Range.clip(powerForward-powerTurn,-1,1));
@@ -91,5 +92,43 @@ public class ResQUtils {
         }
 
         return 0;
+    }
+
+    static int moveMotorByEncoder (DcMotor motor, int pos, int tolerance, double maxDelta, float [] lut ) {
+
+        if (motor.getMode() != DcMotorController.RunMode.RUN_USING_ENCODERS) {
+            motor.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+        }
+        int currentPos = motor.getCurrentPosition();
+        int deltaPos = pos - currentPos;
+
+        if (Math.abs(deltaPos) > tolerance) {
+            // map deltaPos to power
+            double delta = Range.clip(deltaPos/maxDelta, -1.0, 1.0);
+
+            // set power
+            motor.setPower(ResQUtils.lookUpTableFunc((float) delta, lut));
+        }
+        else {
+            motor.setPower(0);
+        }
+        return  currentPos;
+    }
+
+    static void moveMotorByPower(DcMotor motor, float power) {
+        if (motor.getMode() != DcMotorController.RunMode.RUN_USING_ENCODERS) {
+            motor.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+        }
+        motor.setPower(power);
+    }
+
+    static void holdMotorByEncoder(DcMotor motor, int pos, float power){
+        if (!motor.isBusy()) {
+            motor.setTargetPosition(pos);
+            if(motor.getMode() != DcMotorController.RunMode.RUN_TO_POSITION) {
+                motor.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
+            }
+            motor.setPower(power);
+        }
     }
 }

@@ -31,10 +31,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 package com.qualcomm.ftcrobotcontroller.opmodes;
 
+import android.app.backup.RestoreObserver;
+
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorController;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.Range;
 
 /**
@@ -48,6 +51,11 @@ public class DryIceTeleOp extends OpMode {
 	DcMotor motorBottomLeft;
 	DcMotor motorTopRight;
 	DcMotor motorTopLeft;
+
+    DcMotor motorClimber;
+
+    TouchSensor touchLeftArm;
+    TouchSensor touchRightArm;
 
 	// position of the left arm
 	int leftArmLastPos;
@@ -77,6 +85,11 @@ public class DryIceTeleOp extends OpMode {
 	float leftArmParkPower = 0.2f;
 	float rightArmParkPower = 0.1f;
 	int armJammedLimit = 30;
+
+    boolean leftArmLocked = false;
+    boolean rightArmLocked = false;
+    int leftArmLockCounter = 0;
+    int rightArmLockCounter = 0;
 
 	// scooper
 	Servo scooper;
@@ -116,7 +129,7 @@ public class DryIceTeleOp extends OpMode {
 			0.33f, 0.34f, 0.35f, 0.36f, 0.37f, 0.38f, 0.39f, 0.40f,
 			0.41f, 0.42f, 0.43f, 0.44f, 0.45f, 0.46f, 0.47f, 0.48f,
 			0.49f, 0.50f, 0.51f, 0.52f, 0.53f, 0.54f, 0.55f, 0.56f,
-			0.60f, 0.65f, 0.70f, 0.75f, 0.80f, 0.85f, 0.90f, 0.95f, 1.0f };
+            0.6f,  0.7f,  0.8f,  0.9f, 1.0f };
 
 	float [] armSpeedLUT = { 0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f,
 			8.0f, 9.0f, 10.0f, 11.0f, 20.0f, 30.0f, 40.0f, 50.0f, 60.0f, 70.0f,
@@ -153,9 +166,19 @@ public class DryIceTeleOp extends OpMode {
 		motorTopLeft = hardwareMap.dcMotor.get("topLeftM");
 		motorTopLeft.setDirection(DcMotor.Direction.REVERSE);
 
+        motorBottomLeft.setMode(DcMotorController.RunMode.RESET_ENCODERS);
+        motorBottomRight.setMode(DcMotorController.RunMode.RESET_ENCODERS);
+        motorTopLeft.setMode(DcMotorController.RunMode.RESET_ENCODERS);
+        motorTopRight.setMode(DcMotorController.RunMode.RESET_ENCODERS);
+
+        motorClimber = hardwareMap.dcMotor.get("climberM");
+
 		scooper = hardwareMap.servo.get("scooper");
 		elevator = hardwareMap.servo.get("elevator");
 		dumper = hardwareMap.servo.get("dumper");
+
+        touchLeftArm = hardwareMap.touchSensor.get("touchLeftArm");
+        touchRightArm = hardwareMap.touchSensor.get("touchRightArm");
 
 		// assign the starting position of the wrist and claw
 		leftArmLastPos = motorTopLeft.getCurrentPosition();
@@ -174,7 +197,7 @@ public class DryIceTeleOp extends OpMode {
 		rightArmUnloadPosition = rightArmLoadPosition -500;
 		rightArmLowerLimit = rightArmLastPos + 5000;
 		rightArmLastPower = 0.0f;
-		rightArmPowerScale = 0.3f;
+		rightArmPowerScale = 0.6f;
 
         scooper.setPosition(scooperParkingPos);
 		elevator.setPosition(elevatorStopPosition);
@@ -184,8 +207,19 @@ public class DryIceTeleOp extends OpMode {
 		rightWheelStartPos = motorBottomRight.getCurrentPosition();
 		leftWheelCurrent = leftWheelStartPos;
 		rightWheelCurrent = rightWheelStartPos;
+
+        leftArmLocked = false;
+        rightArmLocked = false;
+        leftArmLockCounter = 0;
+        rightArmLockCounter = 0;
 	}
 
+    public void start () {
+        motorBottomLeft.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+        motorBottomRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+        motorTopLeft.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+        motorTopRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+    }
 	/*
 	 * This method will be called repeatedly in a loop
 	 * 
@@ -224,8 +258,7 @@ public class DryIceTeleOp extends OpMode {
 		leftWheelCurrent = motorBottomLeft.getCurrentPosition();
 		rightWheelCurrent = motorBottomRight.getCurrentPosition();
 
-		if ((gamepad1.left_stick_button || gamepad1.a )
-				&& (Math.abs(left)>=0.02 || Math.abs(right) >=0.02) )
+		if (gamepad1.left_stick_button || gamepad1.a)
 		{
 			// traction control mode
 			float leftSpeed = ResQUtils.lookUpTableFunc(left, wheelSpeedLUT);
@@ -266,50 +299,57 @@ public class DryIceTeleOp extends OpMode {
         float leftArm = throttleArm + directionArm;
 
 		// load position
-		if (gamepad1.left_bumper) {
-			if (leftArmHoldPosition == 0){
-				leftArmHoldPosition = leftArmLastPos;
-			}
-			holdLeftArm(leftArmHoldPosition);
-		} else {
-			leftArmHoldPosition = 0;
-			leftArm = Range.clip(leftArm, -1, 1);
-
-			if (gamepad1.right_stick_button ) {
-				leftArm = ResQUtils.lookUpTableFunc(leftArm, armPowerLUT) * leftArmPowerScale;
-				leftArmLastPos = moveLeftArm(leftArm, !gamepad1.b);
-			} else  {
-				leftArmLastPos = moveLeftArmByEncoder(leftArm, !gamepad1.b);
-			}
-
-			if (debug) {
-				telemetry.addData("left ARM ",
-						"pwr: " + String.format("%.2f", leftArm)
-								+ " pos: " + String.format("%05d", leftArmLastPos));
+		if (gamepad1.left_bumper || gamepad2.left_bumper) {
+			leftArmLockCounter++;
+			if (leftArmLockCounter >= 50) {
+				if (leftArmLocked) {
+					leftArmLocked = false;
+				} else {
+					leftArmLocked = true;
+				}
+				leftArmLockCounter = 0;
 			}
 		}
 
-		if (gamepad1.right_bumper) {
-			if (rightArmHoldPosition ==0) {
-				rightArmHoldPosition = rightArmLastPos;
-			}
-			holdRightArm(rightArmHoldPosition);
+        if (leftArmLocked) {
+			//holdLeftArm(leftArmHoldPosition);
+            //ResQUtils.holdMotorByEncoder(motorTopLeft, leftArmLastPos, leftArmHoldPower);
 		} else {
-			rightArmHoldPosition = 0;
-			rightArm = Range.clip(rightArm, -1, 1);
+            leftArm = Range.clip(leftArm, -1.0f, 1.0f);
 
-			if (gamepad1.right_stick_button) {
-				rightArm = ResQUtils.lookUpTableFunc(rightArm, armPowerLUT) * rightArmPowerScale;
-				rightArmLastPos = moveRightArm(rightArm, !gamepad1.b);
-			} else {
-				rightArmLastPos = moveRightArmByEncoder(rightArm, !gamepad1.b);
-			}
-			if (debug) {
-				telemetry.addData("right ARM ",
-						"pwr: " + String.format("%.2f", rightArm)
-								+ "pos: " + String.format("%05d", rightArmLastPos));
+            leftArm = ResQUtils.lookUpTableFunc(leftArm, armPowerLUT) * leftArmPowerScale;
+            leftArmLastPos = moveLeftArm(leftArm, !gamepad1.b);
+        }
+		telemetry.addData("left ARM ",
+				"locked: " + leftArmLocked + " pwr: " + String.format("%.2f", leftArm)
+						+ " pos: " + String.format("%05d", leftArmLastPos));
+
+        // load position
+        if (gamepad1.right_bumper || gamepad2.right_bumper) {
+			rightArmLockCounter++;
+			if (rightArmLockCounter >= 50) {
+				if (rightArmLocked) {
+					rightArmLocked = false;
+				} else {
+					rightArmLocked = true;
+				}
+				rightArmLockCounter = 0;
 			}
 		}
+
+		if (rightArmLocked) {
+            //holdRightArm(rightArmHoldPosition);
+            //ResQUtils.holdMotorByEncoder(motorTopRight, rightArmLastPos, rightArmHoldPower);
+		} else {
+            rightArm = Range.clip(rightArm, -1, 1);
+
+            rightArm = ResQUtils.lookUpTableFunc(rightArm, armPowerLUT) * rightArmPowerScale;
+            rightArmLastPos = moveRightArm(rightArm, !gamepad1.b);
+        }
+
+		telemetry.addData("right ARM ",
+				"locked: " + rightArmLocked + " pwr: " + String.format("%.2f", rightArm)
+						+ "pos: " + String.format("%05d", rightArmLastPos));
 
 		// scooper
 		if (gamepad1.x) {
@@ -319,10 +359,10 @@ public class DryIceTeleOp extends OpMode {
 		}
 
 		// elevator
-		if (gamepad1.dpad_down || gamepad2.dpad_down)
+		if ((gamepad1.dpad_down && gamepad1.dpad_left) || gamepad2.dpad_down)
 		{
 			elevator.setPosition(elevatorDownPosition);
-		} else if (gamepad1.dpad_up || gamepad2.dpad_up)
+		} else if ((gamepad1.dpad_up && gamepad1.dpad_left) || gamepad2.dpad_up)
 		{
 			elevator.setPosition(elevatorUpPosition);
 		}
@@ -333,8 +373,21 @@ public class DryIceTeleOp extends OpMode {
 
 		telemetry.addData("SCOOPER", "pos: " + String.format("%.2g", scooper.getPosition()));
 
+        // climber
+        if ((gamepad1.dpad_down && gamepad1.dpad_right))
+        {
+            ResQUtils.moveMotorByPower(motorClimber, -0.25f);
+        } else if ((gamepad1.dpad_up && gamepad1.dpad_right))
+        {
+            ResQUtils.moveMotorByPower(motorClimber, 0.25f);
+        }
+        else
+        {
+            ResQUtils.moveMotorByPower(motorClimber, (float) Range.clip(gamepad2.right_stick_y, -1.0, 1.0));
+        }
+
 		// dumper
-		float dumperPos = gamepad1.right_trigger;
+		float dumperPos = gamepad1.left_trigger;
 		dumper.setPosition(ResQUtils.lookUpTableFunc(dumperPos, dumperPosLUT));
 		telemetry.addData("DUMPER", "pos: " + String.format("%.2g", dumper.getPosition()));
 	}
@@ -354,46 +407,64 @@ public class DryIceTeleOp extends OpMode {
 	}
 
 	boolean isOutOfLeftArmLimit (int pos, float power ){
-		return (pos < leftArmUpperLimit && power <0) || (pos > leftArmLowerLimit && power >0);
+		//return pos < leftArmUpperLimit && power <0;
+//        return (pos < leftArmUpperLimit && power <0)
+//				|| ((touchLeftArm.isPressed() || pos > leftArmLowerLimit) && power >0);
+        return touchLeftArm.isPressed() && power >0;
 	}
 
 	boolean isOutOfRightArmLimit (int pos, float power) {
-		return (pos < rightArmUpperLimit && power <0 ) || (pos > rightArmLowerLimit && power >0);
+		//return pos < rightArmUpperLimit && power <0 ;
+//        return (pos < rightArmUpperLimit && power <0 )
+//				|| ((touchRightArm.isPressed() || pos > rightArmLowerLimit) && power >0);
+        return touchRightArm.isPressed() && power > 0;
 	}
 
 	int moveLeftArm(float leftArmPower, boolean useLimit)
 	{
 		// check motor limit
 		int leftArmCurrent = motorTopLeft.getCurrentPosition();
-        motorTopLeft.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
-		if (useLimit && isOutOfLeftArmLimit(leftArmCurrent, leftArmPower)) {
+
+        // set motor mode
+        if (motorTopLeft.getMode() != DcMotorController.RunMode.RUN_USING_ENCODERS) {
+            motorTopLeft.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+        }
+
+        // check limit swtich
+		if (useLimit && isOutOfLeftArmLimit(leftArmCurrent,leftArmPower)) {
 			// do something to prevent jamming
 		}
-		else if (Math.abs(leftArmLastPower) >= 0.5
+		else if (Math.abs(leftArmLastPower) >= 0.7
 				&& Math.abs(leftArmLastPos - leftArmCurrent) < armJammedLimit) {
-			motorTopLeft.setPower(leftArmLastPower * 0.2); // lower power when arm stuck
+			motorTopLeft.setPower(leftArmPower * 0.2); // lower power when arm stuck
 		} else {
 			motorTopLeft.setPower(leftArmPower);
 		}
+
         leftArmLastPower = leftArmPower;
+        leftArmLastPos = leftArmCurrent;
 		return leftArmCurrent;
 	}
 
 	int moveRightArm(float rightArmPower, boolean useLimit)
 	{
         int rightArmCurrent = motorTopRight.getCurrentPosition();
-        motorTopRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
-        if (useLimit && isOutOfRightArmLimit(rightArmCurrent, rightArmPower)){
+
+        if (motorTopRight.getMode() != DcMotorController.RunMode.RUN_USING_ENCODERS) {
+            motorTopRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+        }
+
+        if (useLimit && isOutOfRightArmLimit(rightArmCurrent,rightArmPower)){
 			// do something to prevent jamming
 		}
-        else if (Math.abs(rightArmLastPower) >= 0.5
+        else if (Math.abs(rightArmLastPower) >= 0.7
 				&& Math.abs(rightArmLastPos - rightArmCurrent) < armJammedLimit) {
-			motorTopRight.setPower(rightArmLastPower * 0.2);
+			motorTopRight.setPower(rightArmPower * 0.2);
 		} else {
 			motorTopRight.setPower(rightArmPower);
 		}
-
         rightArmLastPower = rightArmPower;
+        rightArmLastPos = rightArmCurrent;
         return rightArmCurrent;
 	}
 
@@ -403,14 +474,14 @@ public class DryIceTeleOp extends OpMode {
 		int armCurrent = motorTopLeft.getCurrentPosition();
 		int nextPosition = (int)(armCurrent + ResQUtils.lookUpTableFunc(left, armSpeedLUT));
 
-		if (useLimit && isOutOfLeftArmLimit(nextPosition, left)) {
+		if (useLimit && touchLeftArm.isPressed()) {
 			// do something to prevent jamming
-		} else {
+		} else if (!motorTopLeft.isBusy()){
 			motorTopLeft.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
 			motorTopLeft.setTargetPosition(nextPosition);
-			motorTopLeft.setPower(Math.max(leftArmParkPower,Math.abs(left)));
+			motorTopLeft.setPower(Math.max(leftArmParkPower, Math.abs(left)));
+            leftArmLastPower = left;
 		}
-		leftArmLastPower = left;
 		leftArmLastPos = armCurrent;
 		return armCurrent;
 	}
@@ -421,51 +492,47 @@ public class DryIceTeleOp extends OpMode {
 		int armCurrent = motorTopRight.getCurrentPosition();
 		int nextPosition = (int)(armCurrent + ResQUtils.lookUpTableFunc(right, armSpeedLUT));
 
-		if (useLimit && isOutOfRightArmLimit(nextPosition, right)) {
+		if (useLimit && touchRightArm.isPressed()) {
 			// do something to prevent jamming
-		} else {
+		} else if (!motorTopRight.isBusy()){
 			motorTopRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
-			motorTopRight.setTargetPosition(nextPosition);
+            motorTopRight.setTargetPosition(nextPosition);
 			motorTopRight.setPower(Math.max(rightArmParkPower, Math.abs(right)));
+            rightArmLastPower = right;
 		}
-		rightArmLastPower = right;
 		rightArmLastPos = armCurrent;
 		return armCurrent;
 	}
 
     void holdLeftArm (int pos)
     {
-        motorTopLeft.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
-        motorTopLeft.setTargetPosition(pos);
-		motorTopLeft.setPower(leftArmHoldPower);
+//        motorTopLeft.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
+//        motorTopLeft.setTargetPosition(pos);
+//		  motorTopLeft.setPower(leftArmHoldPower);
+        ResQUtils.moveMotorByEncoder(motorTopLeft, pos, 10, 300, armPowerLUT);
     }
 
     void holdRightArm(int pos)
     {
-        motorTopRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
-        motorTopRight.setTargetPosition(pos);
-		motorTopRight.setPower(rightArmHoldPower);
+//        motorTopRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
+//        motorTopRight.setTargetPosition(pos);
+//		  motorTopRight.setPower(rightArmHoldPower);
+        ResQUtils.moveMotorByEncoder(motorTopRight, pos, 10, 400.0, armPowerLUT);
     }
 
 	void moveLeftWheelByEncoder(int pos, float power){
-		motorBottomLeft.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
-		motorBottomLeft.setTargetPosition(pos);
-		motorBottomLeft.setPower(power);
+        ResQUtils.holdMotorByEncoder(motorBottomLeft,pos,power);
 	}
 
 	void moveRightWheelByEncoder(int pos, float power){
-		motorBottomRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
-		motorBottomRight.setTargetPosition(pos);
-		motorBottomRight.setPower(power);
+        ResQUtils.holdMotorByEncoder(motorBottomRight, pos, power);
 	}
 
 	void moveLeftWheelByPower(float power) {
-		motorBottomLeft.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
-		motorBottomLeft.setPower(power);
+        ResQUtils.moveMotorByPower(motorBottomLeft,power);
 	}
 	void moveRightWheelByPower(float power) {
-		motorBottomRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
-		motorBottomRight.setPower(power);
+		ResQUtils.moveMotorByPower(motorBottomRight,power);
 	}
 
 }
