@@ -102,10 +102,11 @@ public class DryIceAuto extends DryIceTeleOp {
     Queue<TurnData> turnDataFIFO;
 
     // 3759 per block
-    int StarLineToCenterLineDistance = 6000;
-    int CenterlineToBeaconLineDistance = 8000;
-    int BeaconLineToBeaconDistance = 2100;
+    int StarLineToCenterLineDistance = 1900;
+    int CenterlineToBeaconLineDistance = 9000;
+    int BeaconLineToBeaconDistance = 1100;
     int RampLineToBeaconLineDistance = 3500;
+    int turnAngle = 45;
 
     /**
      * Constructor
@@ -178,6 +179,7 @@ public class DryIceAuto extends DryIceTeleOp {
                 + " ," + String.format("%03d", gyroData.xRotation)
                 + " ," + String.format("%03d", gyroData.yRotation)
                 + " ," + String.format("%03d", gyroData.zRotation)+")");
+        telemetry.addData("READY"," wait 2 more seconds and go!!!!!");
 
     }
 
@@ -334,10 +336,10 @@ public class DryIceAuto extends DryIceTeleOp {
             // set the next stateDryIce
             if (teamColor == 'b') {
                 telemetry.addData("STATE", ": Turning right...");
-                targetAngle = normalizeAngle(targetAngle - 45);
+                targetAngle = normalizeAngle(targetAngle - turnAngle);
             } else {
                 telemetry.addData("STATE", ": Turning left...");
-                targetAngle = normalizeAngle(targetAngle + 45);
+                targetAngle = normalizeAngle(targetAngle + turnAngle);
             }
         } else {
             telemetry.addData("ACTION", "Moving to center line");
@@ -365,10 +367,10 @@ public class DryIceAuto extends DryIceTeleOp {
             // set the next stateDryIce
             if (teamColor == 'b') {
                 telemetry.addData("STATE", ": Turning right...");
-                targetAngle = normalizeAngle(targetAngle - 45);
+                targetAngle = normalizeAngle(targetAngle - (90-turnAngle));
             } else {
                 telemetry.addData("STATE", ": Turning left...");
-                targetAngle = normalizeAngle(targetAngle + 45);
+                targetAngle = normalizeAngle(targetAngle + (90-turnAngle));
             }
         } else {
             telemetry.addData("ACTION", "Moving from center line to beacon line");

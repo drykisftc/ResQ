@@ -55,13 +55,18 @@ public class DryIceRamp extends DryIceAuto {
     public void init() {
         super.init();
         teamColor = 'b';
-        StarLineToCenterLineDistance = 2000;
-        CenterlineToBeaconLineDistance = 5399;
-        BeaconLineToBeaconDistance = 100;
+//        StarLineToCenterLineDistance = 2000;
+//        CenterlineToBeaconLineDistance = 5399;
+//        BeaconLineToBeaconDistance = 100;
+        StarLineToCenterLineDistance = 2850;
+        CenterlineToBeaconLineDistance = 9500;
+        BeaconLineToBeaconDistance = 2500;
+        RampLineToBeaconLineDistance = 3500;
+        turnAngle = 60;
     }
 
 
-    int backup(int startState, int endState) {
+    int backup2(int startState, int endState) {
         if (teamColor == 'b') {
             telemetry.addData("STATE", ": Turning right...");
             targetAngle = normalizeAngle(targetAngle - 45);
@@ -72,11 +77,11 @@ public class DryIceRamp extends DryIceAuto {
         return endState;
     }
 
-    int findRamp(int startState, int endState) {
+    int findRamp2(int startState, int endState) {
         return turn(startState, endState, 0.0f, currentGyro, targetAngle);
     }
 
-    int climbRamp(int startState, int endState) {
+    int climbRamp2(int startState, int endState) {
         int retCode = startState;
         maintainAngleByEncoder(targetAngle,currentGyro,climbSpeed,climbPower);
         long elapse = System.currentTimeMillis() - turnStartTime;

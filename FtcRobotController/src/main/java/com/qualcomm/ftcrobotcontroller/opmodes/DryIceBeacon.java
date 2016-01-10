@@ -50,5 +50,9 @@ public class DryIceBeacon extends DryIceAuto {
     public void init() {
         super.init();
         teamColor = 'b';
+        StarLineToCenterLineDistance = 6000;
+        CenterlineToBeaconLineDistance = 8000;
+        BeaconLineToBeaconDistance = 2100;
+        RampLineToBeaconLineDistance = 3500;
     }
 }
