@@ -362,10 +362,10 @@ public class DryIceTeleOp extends OpMode {
 		// elevator
 		if ((gamepad1.dpad_down && gamepad1.dpad_left) || gamepad2.dpad_down)
 		{
-			elevator.setPosition(elevatorUpPosition);
+			elevator.setPosition(elevatorDownPosition);
 		} else if ((gamepad1.dpad_up && gamepad1.dpad_left) || gamepad2.dpad_up)
 		{
-			elevator.setPosition(elevatorDownPosition);
+			elevator.setPosition(elevatorUpPosition);
 		}
 		else
 		{
@@ -377,10 +377,10 @@ public class DryIceTeleOp extends OpMode {
         // climber
         if ((gamepad1.dpad_down && gamepad1.dpad_right))
         {
-            ResQUtils.moveMotorByPower(motorClimber, -0.25f);
+            ResQUtils.moveMotorByPower(motorClimber, 0.25f);
         } else if ((gamepad1.dpad_up && gamepad1.dpad_right))
         {
-            ResQUtils.moveMotorByPower(motorClimber, 0.25f);
+            ResQUtils.moveMotorByPower(motorClimber, -0.25f);
         }
         else
         {
