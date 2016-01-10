@@ -401,9 +401,20 @@ public class DryIceTeleOp extends OpMode {
 	public void stop() {
         motorBottomRight.setPower(0.0f);
         motorBottomLeft.setPower(0.0f);
-        moveLeftArm(0.0f,true);
-        moveRightArm(0.0f, true);
+        motorTopLeft.setPower(0.0f);
+		motorTopRight.setPower(0.0f);
         scooper.setPosition(scooperParkingPos);
+
+		motorTopLeft.close();
+		motorTopRight.close();
+		motorBottomLeft.close();
+		motorBottomRight.close();
+		scooper.close();
+		motorClimber.close();
+		elevator.close();
+		dumper.close();
+		touchLeftArm.close();
+		touchRightArm.close();
 	}
 
 	boolean isOutOfLeftArmLimit (int pos, float power ){

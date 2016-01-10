@@ -304,11 +304,12 @@ public class DryIceAuto extends DryIceTeleOp {
         super.stop();
         enableLED = false;
         sensorRGB.enableLed(enableLED);
-        sensorRGB.close();
         sensorODSLeft.enableLed(enableLED);
-        sensorODSLeft.close();
         sensorODSRight.enableLed(enableLED);
+        sensorODSLeft.close();
         sensorODSRight.close();
+        sensorRGB.close();
+        sensorGyro.close();
         telemetry.addData("STATE", "Ended");
     }
 
