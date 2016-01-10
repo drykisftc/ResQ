@@ -172,6 +172,7 @@ public class DryIceTeleOp extends OpMode {
         motorTopRight.setMode(DcMotorController.RunMode.RESET_ENCODERS);
 
         motorClimber = hardwareMap.dcMotor.get("climberM");
+		motorClimber.setDirection(DcMotor.Direction.REVERSE);
 
 		scooper = hardwareMap.servo.get("scooper");
 		elevator = hardwareMap.servo.get("elevator");
