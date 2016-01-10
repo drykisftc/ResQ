@@ -67,6 +67,7 @@ public class DryIceAuto extends DryIceTeleOp {
     long lastStateTimeStamp = 0;
 
     float cruisePower = 0.99f;
+    float scoutPower = 0.75f;
     float searchPower = 0.5f;
     float turnPower = 0.4f;
 
@@ -101,9 +102,9 @@ public class DryIceAuto extends DryIceTeleOp {
     Queue<TurnData> turnDataFIFO;
 
     // 3759 per block
-    int StarLineToCenterLineDistance = 3500;
-    int CenterlineToBeaconLineDistance = 7800;
-    int BeaconLineToBeaconDistance = 3500;
+    int StarLineToCenterLineDistance = 6000;
+    int CenterlineToBeaconLineDistance = 8000;
+    int BeaconLineToBeaconDistance = 2100;
     int RampLineToBeaconLineDistance = 3500;
 
     /**
@@ -255,15 +256,14 @@ public class DryIceAuto extends DryIceTeleOp {
                     break;
                 case 2:
                     // go straight
-                    stateDryIce = goStraightFromCenterlineToBeaconLine(2, 3, cruisePower,20000); // should finish in 20 sec
+                    stateDryIce = goStraightFromCenterlineToBeaconLine(2, 3, scoutPower,20000); // should finish in 20 sec
                     break;
                 case 3:
                     // turn
                     stateDryIce = turn(3, 4, 0.0f, currentGyro, targetAngle);
                     break;
                 case 4:
-                    stateDryIce = 5;
-                    //stateDryIce = goStraightFromRampToBeanconLine(4,5, cruisePower, 5000);
+                    stateDryIce = goStraightFromBeaconlineToBeacon(4,5, searchPower, 25000);
                     // find the beacon
                     //stateDryIce = searchBeacon(searchPower, 4, 5);
                     break;
@@ -339,6 +339,8 @@ public class DryIceAuto extends DryIceTeleOp {
                 telemetry.addData("STATE", ": Turning left...");
                 targetAngle = normalizeAngle(targetAngle + 45);
             }
+        } else {
+            telemetry.addData("ACTION", "Moving to center line");
         }
         return retCode;
     }
@@ -356,6 +358,10 @@ public class DryIceAuto extends DryIceTeleOp {
         }
 
         if (retCode == endState) {
+
+            leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
+            rightWheelStartPos = motorBottomRight.getCurrentPosition();
+
             // set the next stateDryIce
             if (teamColor == 'b') {
                 telemetry.addData("STATE", ": Turning right...");
@@ -364,7 +370,33 @@ public class DryIceAuto extends DryIceTeleOp {
                 telemetry.addData("STATE", ": Turning left...");
                 targetAngle = normalizeAngle(targetAngle + 45);
             }
+        } else {
+            telemetry.addData("ACTION", "Moving from center line to beacon line");
         }
+        return retCode;
+    }
+
+    int goStraightFromBeaconlineToBeacon(int startState, int endState, float power, long timeLimit) {
+
+        int distanceLeft = sensorODSLeft.getLightDetectedRaw();
+        int distanceRight = sensorODSRight.getLightDetectedRaw();
+        int retCode = startState;
+
+        telemetry.addData("STATE",
+                ": Move toward beacon...distance ("
+                        + String.format("%03d", distanceLeft) + ", "
+                        + String.format("%03d", distanceRight) + ") ");
+
+        if (distanceLeft < collisionDistThreshold && distanceRight < collisionDistThreshold) {
+            retCode = goStraight(startState, endState, power, BeaconLineToBeaconDistance, timeLimit);
+        }
+
+        if (retCode == endState) {
+            telemetry.addData("STATE", "Move from beacon line to beacon completed");
+        } else {
+            telemetry.addData("ACTION", "Moving from beacon line to beacon");
+        }
+
         return retCode;
     }
 
@@ -414,28 +446,6 @@ public class DryIceAuto extends DryIceTeleOp {
             }
         }
         return retCode;
-    }
-
-    int turn(int startState, int endState, double power, int currentAngle, int stopAngle) {
-
-        if (Math.abs(currentAngle - stopAngle) < targetAngleTolerance) {
-            motorBottomRight.setPower(0.0);
-            motorBottomLeft.setPower(0.0);
-            lastStateTimeStamp = System.currentTimeMillis();
-            telemetry.addData("STATE", ": Turn done");
-            leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
-            rightWheelStartPos = motorBottomRight.getCurrentPosition();
-            return endState;
-        } else {
-            maintainAngle(stopAngle, currentAngle, power);
-            if (teamColor == 'b') {
-                telemetry.addData("STATE", ": Turning right...");
-            } else {
-                telemetry.addData("STATE", ": Turning left...");
-            }
-        }
-
-        return startState;
     }
 
     int moveToBeacon(double power, int startState, int endState) {
@@ -631,10 +641,9 @@ public class DryIceAuto extends DryIceTeleOp {
             // stop at the center blue/red line
             motorBottomRight.setPower(0);
             motorBottomLeft.setPower(0);
+            lastStateTimeStamp = System.currentTimeMillis();
             leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
             rightWheelStartPos = motorBottomRight.getCurrentPosition();
-            lastStateTimeStamp = System.currentTimeMillis();
-
             return endState;
         } else {
             telemetry.addData("STATE", ": Going Straight...");
@@ -647,8 +656,31 @@ public class DryIceAuto extends DryIceTeleOp {
         return startState;
     }
 
+    int turn(int startState, int endState, double power, int currentAngle, int stopAngle) {
+
+        if (Math.abs(currentAngle - stopAngle) < targetAngleTolerance) {
+            telemetry.addData("STATE", ": Turn done");
+            motorBottomRight.setPower(0.0);
+            motorBottomLeft.setPower(0.0);
+            lastStateTimeStamp = System.currentTimeMillis();
+            leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
+            rightWheelStartPos = motorBottomRight.getCurrentPosition();
+            return endState;
+        } else {
+            maintainAngle(stopAngle, currentAngle, power);
+            if (teamColor == 'b') {
+                telemetry.addData("STATE", ": Turning right...");
+            } else {
+                telemetry.addData("STATE", ": Turning left...");
+            }
+        }
+
+        return startState;
+    }
+
     int getOdometer() {
-        return (Math.abs(leftWheelCurrent-leftWheelStartPos)+Math.abs(rightWheelCurrent-rightWheelStartPos))/2;
+        return (motorBottomLeft.getCurrentPosition()-leftWheelStartPos
+                +motorBottomRight.getCurrentPosition()-rightWheelStartPos)/2;
     }
 }
 
