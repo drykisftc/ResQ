@@ -362,10 +362,10 @@ public class DryIceTeleOp extends OpMode {
 		// elevator
 		if ((gamepad1.dpad_down && gamepad1.dpad_left) || gamepad2.dpad_down)
 		{
-			elevator.setPosition(elevatorDownPosition);
+			elevator.setPosition(elevatorUpPosition);
 		} else if ((gamepad1.dpad_up && gamepad1.dpad_left) || gamepad2.dpad_up)
 		{
-			elevator.setPosition(elevatorUpPosition);
+			elevator.setPosition(elevatorDownPosition);
 		}
 		else
 		{
