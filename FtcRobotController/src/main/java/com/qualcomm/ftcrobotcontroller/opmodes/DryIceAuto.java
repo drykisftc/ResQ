@@ -102,9 +102,9 @@ public class DryIceAuto extends DryIceTeleOp {
     Queue<TurnData> turnDataFIFO;
 
     // 3759 per block
-    int StarLineToCenterLineDistance = 1900;
-    int CenterlineToBeaconLineDistance = 9000;
-    int BeaconLineToBeaconDistance = 1100;
+    int StarLineToCenterLineDistance = 1500;
+    int CenterlineToBeaconLineDistance = 6400;
+    int BeaconLineToBeaconDistance = 4500;
     int RampLineToBeaconLineDistance = 3500;
     int turnAngle = 45;
 
@@ -258,6 +258,7 @@ public class DryIceAuto extends DryIceTeleOp {
                     break;
                 case 2:
                     // go straight
+                    turnAngle = 2;
                     stateDryIce = goStraightFromCenterlineToBeaconLine(2, 3, scoutPower,20000); // should finish in 20 sec
                     break;
                 case 3:
@@ -291,7 +292,6 @@ public class DryIceAuto extends DryIceTeleOp {
 
             }
         }
-
     }
 
     /*

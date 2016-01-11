@@ -55,4 +55,74 @@ public class DryIceBeacon extends DryIceAuto {
         BeaconLineToBeaconDistance = 2100;
         RampLineToBeaconLineDistance = 3500;
     }
+
+    public void loop() {
+
+        telemetry.addData("STATE", stateDryIce);
+
+        if (System.currentTimeMillis() - startTime > timeBudget) {
+            stop();
+        } else {
+            prevGyro = currentGyro;
+
+            leftWheelCurrent = motorBottomLeft.getCurrentPosition();
+            rightWheelCurrent = motorBottomLeft.getCurrentPosition();
+
+            //currentGyro = getGyroHeading();
+            //upateRotationData();
+            ResQUtils.getGyroData(sensorGyro, gyroData);
+            currentGyro = gyroData.heading;
+            telemetry.addData("GYRO", "GYRO: " + String.format("%03d", targetAngle)
+                    + " (" + String.format("%03d", currentGyro)
+                    + " ," + String.format("%03d", gyroData.xRotation)
+                    + " ," + String.format("%03d", gyroData.yRotation)
+                    + " ," + String.format("%03d", gyroData.zRotation) + ")");
+            telemetry.addData("DISTANCE", "Left:" + String.format("%05d", leftWheelCurrent - leftWheelStartPos)
+                    + ". Right:" + String.format("%05d", rightWheelCurrent - rightWheelStartPos));
+
+            switch (stateDryIce) {
+                case 0:
+                    // go straight
+                    stateDryIce = goStraightToCenterLine(0, 1, cruisePower, 8000); // should finish in 8 sec
+                    break;
+                case 1:
+                    // turn
+                    stateDryIce = turn(1, 2, 0.0f, currentGyro, targetAngle);
+                    break;
+                case 2:
+                    // go straight
+                    stateDryIce = goStraightFromCenterlineToBeaconLine(2, 3, scoutPower, 20000); // should finish in 20 sec
+                    break;
+                case 3:
+                    // turn
+                    stateDryIce = turn(3, 4, 0.0f, currentGyro, targetAngle);
+                    break;
+                case 4:
+                    stateDryIce = goStraightFromBeaconlineToBeacon(4, 5, searchPower, 25000);
+                    // find the beacon
+                    //stateDryIce = searchBeacon(searchPower, 4, 5);
+                    break;
+                case 5:
+                    // touch the button
+                    stateDryIce = touchButton(5, 6);
+                    break;
+                case 6:
+                    // backup
+                    stateDryIce = backup(6, 7);
+                    break;
+                case 7:
+                    // find the ramp with correct color
+                    stateDryIce = findRamp(7, 8);
+                    break;
+                case 8:
+                    // climb up the ramp
+                    stateDryIce = climbRamp(8, 9);
+                    break;
+                default:
+                    stop();
+                    // error
+
+            }
+        }
+    }
 }
