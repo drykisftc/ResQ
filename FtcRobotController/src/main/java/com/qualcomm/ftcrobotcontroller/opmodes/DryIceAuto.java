@@ -69,9 +69,9 @@ public class DryIceAuto extends DryIceTeleOp {
     float cruisePower = 0.99f;
     float scoutPower = 0.75f;
     float searchPower = 0.5f;
-    float turnPower = 0.4f;
+    float turnPower = 0.3f;
 
-    int collisionDistThreshold = 50;
+    int collisionDistThreshold = 70;
     int minColorBrightness = 8;
     TurnData prevTurnData;
     double prevTurnPower = 0.0;
@@ -90,7 +90,7 @@ public class DryIceAuto extends DryIceTeleOp {
     float[] angle2DistanceLUT = {0.00f, 2.0f, 5.1f, 7.5f, 10.15f, 15.2f, 20.25f, 30.3f, 40.35f, 50.4f};
     float lastSkew =0;
     float skewPowerScale = 1.0f;
-    float skewPowerGain = 1.08f;
+    float skewPowerGain = 1.03f;
 
     GyroData gyroData;
     int refXRotation = 0;
@@ -512,6 +512,12 @@ public class DryIceAuto extends DryIceTeleOp {
         }
 
         return retCode;
+    }
+
+    int dropClimber (int startState, int endState) {
+        int stateCode = startState;
+        stateCode = endState;
+        return stateCode;
     }
 
     int touchButton(int startState, int endState) {

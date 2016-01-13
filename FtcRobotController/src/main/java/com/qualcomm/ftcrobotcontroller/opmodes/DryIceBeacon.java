@@ -46,14 +46,22 @@ import java.util.Queue;
  */
 public class DryIceBeacon extends DryIceAuto {
 
+    int dumpClimberArmPosition = 0;
+    int dumpArmDelta = 2900;
+
     @Override
     public void init() {
         super.init();
         teamColor = 'b';
-        StarLineToCenterLineDistance = 6000;
+        StarLineToCenterLineDistance = 5400;
         CenterlineToBeaconLineDistance = 8000;
-        BeaconLineToBeaconDistance = 2100;
+        BeaconLineToBeaconDistance = 2400;
         RampLineToBeaconLineDistance = 3500;
+    }
+
+    public void start () {
+        super.start();
+        dumpClimberArmPosition = rightArmUpperLimit + dumpArmDelta;
     }
 
     public void loop() {
@@ -99,24 +107,26 @@ public class DryIceBeacon extends DryIceAuto {
                     break;
                 case 4:
                     stateDryIce = goStraightFromBeaconlineToBeacon(4, 5, searchPower, 25000);
-                    // find the beacon
-                    //stateDryIce = searchBeacon(searchPower, 4, 5);
                     break;
                 case 5:
                     // touch the button
-                    stateDryIce = touchButton(5, 6);
+                    stateDryIce = dropClimber(5, 6);
                     break;
                 case 6:
-                    // backup
-                    stateDryIce = backup(6, 7);
+                    // touch the button
+                    stateDryIce = touchButton(6, 7);
                     break;
                 case 7:
-                    // find the ramp with correct color
-                    stateDryIce = findRamp(7, 8);
+                    // backup
+                    stateDryIce = backup(7, 8);
                     break;
                 case 8:
+                    // find the ramp with correct color
+                    stateDryIce = findRamp(8, 9);
+                    break;
+                case 9:
                     // climb up the ramp
-                    stateDryIce = climbRamp(8, 9);
+                    stateDryIce = climbRamp(9, 10);
                     break;
                 default:
                     stop();
@@ -124,5 +134,52 @@ public class DryIceBeacon extends DryIceAuto {
 
             }
         }
+    }
+
+    int dropClimber (int startState, int endState) {
+        int stateCode = startState;
+
+        int armPosition = motorTopRight.getCurrentPosition();
+
+        if ( Math.abs(armPosition-dumpClimberArmPosition) > dumpArmDelta/2) {
+            if (motorTopRight.getMode() != DcMotorController.RunMode.RUN_TO_POSITION) {
+                motorTopRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
+            }
+            motorTopRight.setTargetPosition(dumpClimberArmPosition);
+            motorTopRight.setPower(0.4);
+        }
+        else if (!motorTopRight.isBusy())
+        {
+            stateCode = endState;
+            lastStateTimeStamp = System.currentTimeMillis();
+            telemetry.addData("STATE", ": dump climber done");
+        }
+
+        return stateCode;
+    }
+
+    int touchButton(int startState, int endState) {
+        int stateCode = startState;
+
+        int armPosition = motorTopRight.getCurrentPosition();
+
+        if ( Math.abs(armPosition-rightArmUpperLimit) > 400) {
+            if (motorTopRight.getMode() != DcMotorController.RunMode.RUN_TO_POSITION) {
+                motorTopRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
+            }
+            motorTopRight.setTargetPosition(rightArmUpperLimit + 300);
+            motorTopRight.setPower(0.3);
+
+        }
+        else if (!motorTopRight.isBusy())
+        {
+            stateCode = endState;
+            motorTopRight.setPower(0.0);
+            motorTopRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
+            lastStateTimeStamp = System.currentTimeMillis();
+            telemetry.addData("STATE", ": move back arm done");
+        }
+
+        return stateCode;
     }
 }
