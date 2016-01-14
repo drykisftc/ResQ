@@ -48,14 +48,15 @@ public class DryIceBeacon extends DryIceAuto {
 
     int dumpClimberArmPosition = 0;
     int dumpArmDelta = 2900;
+    int minWhiteLineBrightness = 12;
 
     @Override
     public void init() {
         super.init();
         teamColor = 'b';
-        StarLineToCenterLineDistance = 5400;
-        CenterlineToBeaconLineDistance = 8000;
-        BeaconLineToBeaconDistance = 2400;
+        StarLineToCenterLineDistance = 4600;
+        CenterlineToBeaconLineDistance = 9000;
+        BeaconLineToBeaconDistance = 3100;
         RampLineToBeaconLineDistance = 3500;
     }
 
@@ -103,7 +104,7 @@ public class DryIceBeacon extends DryIceAuto {
                     break;
                 case 3:
                     // turn
-                    stateDryIce = turn(3, 4, 0.0f, currentGyro, targetAngle);
+                    stateDryIce = turn(3, 4, 0.02f, currentGyro, targetAngle);
                     break;
                 case 4:
                     stateDryIce = goStraightFromBeaconlineToBeacon(4, 5, searchPower, 25000);
@@ -136,6 +137,48 @@ public class DryIceBeacon extends DryIceAuto {
         }
     }
 
+    int goStraightFromCenterlineToBeaconLine(int startState, int endState, float power, long timeLimit) {
+        int retCode = startState;
+
+        char color = ResQUtils.getColor(sensorRGB, colorSensitivity, minColorBrightness, rgb);
+        telemetry.addData("COLOR", ": " + color +
+                " r=" + String.format("%d", rgb.r) +
+                " g=" + String.format("%d", rgb.g) +
+                " b=" + String.format("%d", rgb.b));
+        if (color == 'u' && rgb.r+rgb.g+rgb.b >= minWhiteLineBrightness) {
+            leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
+            rightWheelStartPos = motorBottomRight.getCurrentPosition();
+            retCode = goStraight(startState, endState, power, 100, timeLimit);;
+        }
+        else if (color == teamColor) {
+            // lower speed
+            retCode = goStraight(startState, endState, power*0.4f, CenterlineToBeaconLineDistance, timeLimit);
+        }
+        else {
+            retCode = goStraight(startState, endState, power, CenterlineToBeaconLineDistance, timeLimit);
+        }
+
+        if (retCode == endState) {
+            motorBottomLeft.setPower(0.0);
+            motorBottomRight.setPower(0.0);
+            leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
+            rightWheelStartPos = motorBottomRight.getCurrentPosition();
+
+            // set the next stateDryIce
+            if (teamColor == 'b') {
+                telemetry.addData("STATE", ": Turning right...");
+                targetAngle = normalizeAngle(targetAngle - (90-turnAngle));
+            } else {
+                telemetry.addData("STATE", ": Turning left...");
+                targetAngle = normalizeAngle(targetAngle + (90-turnAngle));
+            }
+        } else {
+            telemetry.addData("ACTION", "Moving from center line to beacon line");
+        }
+        return retCode;
+    }
+
+
     int dropClimber (int startState, int endState) {
         int stateCode = startState;
 
@@ -146,7 +189,7 @@ public class DryIceBeacon extends DryIceAuto {
                 motorTopRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
             }
             motorTopRight.setTargetPosition(dumpClimberArmPosition);
-            motorTopRight.setPower(0.4);
+            motorTopRight.setPower(0.45);
         }
         else if (!motorTopRight.isBusy())
         {

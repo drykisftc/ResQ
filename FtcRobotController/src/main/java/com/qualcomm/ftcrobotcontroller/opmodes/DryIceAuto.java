@@ -71,7 +71,7 @@ public class DryIceAuto extends DryIceTeleOp {
     float searchPower = 0.5f;
     float turnPower = 0.3f;
 
-    int collisionDistThreshold = 70;
+    int collisionDistThreshold = 15;
     int minColorBrightness = 8;
     TurnData prevTurnData;
     double prevTurnPower = 0.0;
@@ -85,12 +85,13 @@ public class DryIceAuto extends DryIceTeleOp {
                               0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f,
                               0.07f, 0.07f, 0.07f, 0.07f, 0.07f, 0.07f, 0.07f, 0.07f, 0.07f, 0.07f,
                               0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f,
-                              0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f};
+                              0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f,
+                              0.1f,  0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f, 0.17f, 0.18f, 0.19f};
 
     float[] angle2DistanceLUT = {0.00f, 2.0f, 5.1f, 7.5f, 10.15f, 15.2f, 20.25f, 30.3f, 40.35f, 50.4f};
     float lastSkew =0;
     float skewPowerScale = 1.0f;
-    float skewPowerGain = 1.03f;
+    float skewPowerGain = 1.02f;
 
     GyroData gyroData;
     int refXRotation = 0;
@@ -393,8 +394,15 @@ public class DryIceAuto extends DryIceTeleOp {
         if (distanceLeft < collisionDistThreshold && distanceRight < collisionDistThreshold) {
             retCode = goStraight(startState, endState, power, BeaconLineToBeaconDistance, timeLimit);
         }
+        else {
+            retCode = endState;
+        }
 
         if (retCode == endState) {
+            motorBottomLeft.setPower(0.0);
+            motorBottomRight.setPower(0.0);
+            leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
+            rightWheelStartPos = motorBottomRight.getCurrentPosition();
             telemetry.addData("STATE", "Move from beacon line to beacon completed");
         } else {
             telemetry.addData("ACTION", "Moving from beacon line to beacon");
