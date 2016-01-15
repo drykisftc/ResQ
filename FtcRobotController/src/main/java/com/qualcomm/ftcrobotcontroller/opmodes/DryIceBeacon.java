@@ -48,16 +48,17 @@ public class DryIceBeacon extends DryIceAuto {
 
     int dumpClimberArmPosition = 0;
     int dumpArmDelta = 2900;
-    int minWhiteLineBrightness = 12;
+    int minWhiteLineBrightness = 10;
 
     @Override
     public void init() {
         super.init();
         teamColor = 'b';
-        StarLineToCenterLineDistance = 4600;
-        CenterlineToBeaconLineDistance = 9000;
-        BeaconLineToBeaconDistance = 3100;
+        StarLineToCenterLineDistance = 4900;
+        CenterlineToBeaconLineDistance = 9800;
+        BeaconLineToBeaconDistance = 2800;
         RampLineToBeaconLineDistance = 3500;
+        turnAngle = 45;
     }
 
     public void start () {
@@ -148,11 +149,13 @@ public class DryIceBeacon extends DryIceAuto {
         if (color == 'u' && rgb.r+rgb.g+rgb.b >= minWhiteLineBrightness) {
             leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
             rightWheelStartPos = motorBottomRight.getCurrentPosition();
-            retCode = goStraight(startState, endState, power, 100, timeLimit);;
+            retCode = goStraight(startState, endState, power, 400, timeLimit);;
         }
         else if (color == teamColor) {
             // lower speed
-            retCode = goStraight(startState, endState, power*0.4f, CenterlineToBeaconLineDistance, timeLimit);
+            leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
+            rightWheelStartPos = motorBottomRight.getCurrentPosition();
+            retCode = goStraight(startState, endState, power*0.5f, BeaconLineToBeaconDistance/3, timeLimit);
         }
         else {
             retCode = goStraight(startState, endState, power, CenterlineToBeaconLineDistance, timeLimit);

@@ -67,8 +67,8 @@ public class DryIceAuto extends DryIceTeleOp {
     long lastStateTimeStamp = 0;
 
     float cruisePower = 0.99f;
-    float scoutPower = 0.75f;
-    float searchPower = 0.5f;
+    float scoutPower = 0.5f;
+    float searchPower = 0.4f;
     float turnPower = 0.3f;
 
     int collisionDistThreshold = 15;
@@ -82,16 +82,15 @@ public class DryIceAuto extends DryIceTeleOp {
     int targetAngle = 0;
     int targetAngleTolerance = 2;
     float[] angle2PowerLUT = {0.00f, 0.01f, 0.015f, 0.02f, 0.025f, 0.03f, 0.035f, 0.04f, 0.045f,0.05f,
-                              0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f,
-                              0.07f, 0.07f, 0.07f, 0.07f, 0.07f, 0.07f, 0.07f, 0.07f, 0.07f, 0.07f,
-                              0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f, 0.08f,
-                              0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f, 0.09f,
-                              0.1f,  0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f, 0.17f, 0.18f, 0.19f};
+                              0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.07f, 0.07f, 0.07f,
+                              0.07f, 0.07f, 0.07f, 0.08f, 0.08f, 0.08f, 0.08f, 0.09f, 0.09f, 0.09f,
+                              0.09f,  0.09f,  0.1f,  0.1f,  0.1f,  0.1f, 0.1f, 0.11f, 0.11f, 0.11f,
+                              0.12f,  0.13f, 0.14f, 0.15f, 0.16f, 0.17f, 0.18f, 0.19f, 0.2f, 0.4f};
 
     float[] angle2DistanceLUT = {0.00f, 2.0f, 5.1f, 7.5f, 10.15f, 15.2f, 20.25f, 30.3f, 40.35f, 50.4f};
     float lastSkew =0;
     float skewPowerScale = 1.0f;
-    float skewPowerGain = 1.02f;
+    float skewPowerGain = 1.03f;
 
     GyroData gyroData;
     int refXRotation = 0;
