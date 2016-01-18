@@ -46,24 +46,25 @@ import java.util.Queue;
  */
 public class DryIceBeacon extends DryIceAuto {
 
-    int dumpClimberArmPosition = 0;
-    int dumpArmDelta = 2900;
     int minWhiteLineBrightness = 10;
+    int BeaconLineToRampLineDistance = 3500;
 
     @Override
     public void init() {
         super.init();
         teamColor = 'b';
-        StarLineToCenterLineDistance = 4900;
-        CenterlineToBeaconLineDistance = 9800;
-        BeaconLineToBeaconDistance = 2800;
-        RampLineToBeaconLineDistance = 3500;
+        StarLineToCenterLineDistance = 1500;
+        CenterlineToBeaconLineDistance = 6800;
+        BeaconLineToBeaconDistance = 3500;
+        RampLineToBeaconLineDistance = 5300;
+        BeaconToBeaconLine = 3500;
         turnAngle = 45;
+        dumpArmDelta = 2900;
+        collisionDistThreshold = 30;
     }
 
     public void start () {
         super.start();
-        dumpClimberArmPosition = rightArmUpperLimit + dumpArmDelta;
     }
 
     public void loop() {
@@ -101,34 +102,47 @@ public class DryIceBeacon extends DryIceAuto {
                     break;
                 case 2:
                     // go straight
-                    stateDryIce = goStraightFromCenterlineToBeaconLine(2, 3, scoutPower, 20000); // should finish in 20 sec
+                    turnAngle = 135;
+                    stateDryIce = goStraightFromCenterlineToBeaconLine(2, 3, cruisePower, 10000); // should finish in 20 sec
                     break;
                 case 3:
                     // turn
                     stateDryIce = turn(3, 4, 0.02f, currentGyro, targetAngle);
                     break;
                 case 4:
-                    stateDryIce = goStraightFromBeaconlineToBeacon(4, 5, searchPower, 25000);
+                    stateDryIce = goStraight(4, 5, cruisePower, RampLineToBeaconLineDistance, 10000);
+                    if (5 == stateDryIce) {
+                        setLandMark();
+                        // set the next stateDryIce
+                        if (teamColor == 'b') {
+                            telemetry.addData("STATE", ": Turning right...");
+                            targetAngle = normalizeAngle(targetAngle - 90);
+                        } else {
+                            telemetry.addData("STATE", ": Turning left...");
+                            targetAngle = normalizeAngle(targetAngle + 90);
+                        }
+                    }
                     break;
                 case 5:
-                    // touch the button
-                    stateDryIce = dropClimber(5, 6);
+                    // turn
+                    stateDryIce = turn(5, 6, 0.00f, currentGyro, targetAngle);
                     break;
                 case 6:
-                    // touch the button
-                    stateDryIce = touchButton(6, 7);
+                    stateDryIce = goStraightFromBeaconlineToBeacon(6, 7, cruisePower, 5000);
                     break;
                 case 7:
-                    // backup
-                    stateDryIce = backup(7, 8);
+                    // touch the button
+                    stateDryIce = dropClimber(7, 8);
                     break;
                 case 8:
-                    // find the ramp with correct color
-                    stateDryIce = findRamp(8, 9);
+                    // touch the button
+                    stateDryIce = touchButton(8, 9);
                     break;
                 case 9:
-                    // climb up the ramp
-                    stateDryIce = climbRamp(9, 10);
+                    stateDryIce = turn(9,10, 0.0f, currentGyro, targetAngle);
+                    break;
+                case 10:
+                    stateDryIce = goStraight(10, 11, cruisePower, BeaconToBeaconLine, 10000);
                     break;
                 default:
                     stop();
@@ -138,7 +152,7 @@ public class DryIceBeacon extends DryIceAuto {
         }
     }
 
-    int goStraightFromCenterlineToBeaconLine(int startState, int endState, float power, long timeLimit) {
+    int goStraightFromCenterlineToBeaconLine2(int startState, int endState, float power, long timeLimit) {
         int retCode = startState;
 
         char color = ResQUtils.getColor(sensorRGB, colorSensitivity, minColorBrightness, rgb);
@@ -155,17 +169,14 @@ public class DryIceBeacon extends DryIceAuto {
             // lower speed
             leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
             rightWheelStartPos = motorBottomRight.getCurrentPosition();
-            retCode = goStraight(startState, endState, power*0.5f, BeaconLineToBeaconDistance/3, timeLimit);
+            retCode = goStraight(startState, endState, power*0.5f, BeaconLineToBeaconDistance/4, timeLimit);
         }
         else {
             retCode = goStraight(startState, endState, power, CenterlineToBeaconLineDistance, timeLimit);
         }
 
         if (retCode == endState) {
-            motorBottomLeft.setPower(0.0);
-            motorBottomRight.setPower(0.0);
-            leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
-            rightWheelStartPos = motorBottomRight.getCurrentPosition();
+            setLandMark();
 
             // set the next stateDryIce
             if (teamColor == 'b') {
@@ -197,8 +208,19 @@ public class DryIceBeacon extends DryIceAuto {
         else if (!motorTopRight.isBusy())
         {
             stateCode = endState;
-            lastStateTimeStamp = System.currentTimeMillis();
             telemetry.addData("STATE", ": dump climber done");
+        }
+
+        if (stateCode == endState) {
+            setLandMark();
+            // set the next stateDryIce
+            if (teamColor == 'b') {
+                telemetry.addData("STATE", ": Turning right...");
+                targetAngle = normalizeAngle(targetAngle - 89);
+            } else {
+                telemetry.addData("STATE", ": Turning left...");
+                targetAngle = normalizeAngle(targetAngle + 89);
+            }
         }
 
         return stateCode;
@@ -222,9 +244,11 @@ public class DryIceBeacon extends DryIceAuto {
             stateCode = endState;
             motorTopRight.setPower(0.0);
             motorTopRight.setMode(DcMotorController.RunMode.RUN_USING_ENCODERS);
-            lastStateTimeStamp = System.currentTimeMillis();
             telemetry.addData("STATE", ": move back arm done");
         }
+
+        stateCode = Math.min(stateCode,
+                turn(startState,endState,0.0f,currentGyro,targetAngle));
 
         return stateCode;
     }

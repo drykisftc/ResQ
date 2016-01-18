@@ -81,16 +81,16 @@ public class DryIceAuto extends DryIceTeleOp {
     int currentGyro = 0;
     int targetAngle = 0;
     int targetAngleTolerance = 2;
-    float[] angle2PowerLUT = {0.00f, 0.01f, 0.015f, 0.02f, 0.025f, 0.03f, 0.035f, 0.04f, 0.045f,0.05f,
-                              0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.06f, 0.07f, 0.07f, 0.07f,
-                              0.07f, 0.07f, 0.07f, 0.08f, 0.08f, 0.08f, 0.08f, 0.09f, 0.09f, 0.09f,
-                              0.09f,  0.09f,  0.1f,  0.1f,  0.1f,  0.1f, 0.1f, 0.11f, 0.11f, 0.11f,
-                              0.12f,  0.13f, 0.14f, 0.15f, 0.16f, 0.17f, 0.18f, 0.19f, 0.2f, 0.4f};
+    float[] angle2PowerLUT = {0.00f, 0.02f, 0.04f, 0.06f, 0.08f, 0.10f, 0.10f, 0.10f, 0.10f,0.10f,
+                              0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f, 0.16f, 0.17f, 0.18f, 0.19f,
+                              0.20f, 0.22f, 0.24f, 0.26f, 0.28f, 0.30f, 0.32f, 0.34f, 0.36f, 0.38f,
+                              0.40f, 0.42f, 0.44f, 0.46f, 0.48f, 0.50f, 0.52f, 0.54f, 0.56f, 0.58f,
+                              0.60f, 0.64f, 0.68f,  0.70f, 0.75f, 0.80f, 0.85f, 0.90f, 0.95f, 0.99f};
 
     float[] angle2DistanceLUT = {0.00f, 2.0f, 5.1f, 7.5f, 10.15f, 15.2f, 20.25f, 30.3f, 40.35f, 50.4f};
     float lastSkew =0;
     float skewPowerScale = 1.0f;
-    float skewPowerGain = 1.03f;
+    float skewPowerGain = 1.04f;
 
     GyroData gyroData;
     int refXRotation = 0;
@@ -103,10 +103,16 @@ public class DryIceAuto extends DryIceTeleOp {
 
     // 3759 per block
     int StarLineToCenterLineDistance = 1500;
-    int CenterlineToBeaconLineDistance = 6400;
-    int BeaconLineToBeaconDistance = 4500;
+    int CenterlineToBeaconLineDistance = 6900;
+    int BeaconLineToBeaconDistance = 5000;
     int RampLineToBeaconLineDistance = 3500;
+    int BeaconToBeaconLine = 4000;
+    int BeaconLineToRamp = 6000;
+    int RampDistance = 20000;
     int turnAngle = 45;
+
+    int dumpClimberArmPosition = 0;
+    int dumpArmDelta = 3500;
 
     /**
      * Constructor
@@ -214,6 +220,7 @@ public class DryIceAuto extends DryIceTeleOp {
         rightWheelStartPos = motorBottomRight.getCurrentPosition();
         leftWheelCurrent = leftWheelStartPos;
         rightWheelCurrent = rightWheelStartPos;
+        dumpClimberArmPosition = rightArmUpperLimit + dumpArmDelta;
 
     }
 
@@ -266,7 +273,7 @@ public class DryIceAuto extends DryIceTeleOp {
                     stateDryIce = turn(3, 4, 0.0f, currentGyro, targetAngle);
                     break;
                 case 4:
-                    stateDryIce = goStraightFromBeaconlineToBeacon(4,5, searchPower, 25000);
+                    stateDryIce = goStraightFromBeaconlineToBeacon(4,5, cruisePower, 30000);
                     // find the beacon
                     //stateDryIce = searchBeacon(searchPower, 4, 5);
                     break;
@@ -334,6 +341,9 @@ public class DryIceAuto extends DryIceTeleOp {
         }
 
         if (endState == retCode) {
+
+            setLandMark();
+
             // set the next stateDryIce
             if (teamColor == 'b') {
                 telemetry.addData("STATE", ": Turning right...");
@@ -362,8 +372,7 @@ public class DryIceAuto extends DryIceTeleOp {
 
         if (retCode == endState) {
 
-            leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
-            rightWheelStartPos = motorBottomRight.getCurrentPosition();
+            setLandMark();
 
             // set the next stateDryIce
             if (teamColor == 'b') {
@@ -398,13 +407,36 @@ public class DryIceAuto extends DryIceTeleOp {
         }
 
         if (retCode == endState) {
-            motorBottomLeft.setPower(0.0);
-            motorBottomRight.setPower(0.0);
-            leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
-            rightWheelStartPos = motorBottomRight.getCurrentPosition();
+            setLandMark();
             telemetry.addData("STATE", "Move from beacon line to beacon completed");
         } else {
             telemetry.addData("ACTION", "Moving from beacon line to beacon");
+        }
+
+        return retCode;
+    }
+
+    int goStraightFromBeaconToBeaconLine(int startState, int endState, float power, long timeLimit) {
+
+        int retCode = startState;
+
+        retCode = goStraight(startState, endState, power, BeaconToBeaconLine, timeLimit);
+
+        if (retCode == endState) {
+            setLandMark();
+            telemetry.addData("STATE", "Move from beacon to beacon line completed");
+
+            // set the next stateDryIce
+            if (teamColor == 'b') {
+                telemetry.addData("STATE", ": Turning left...");
+                targetAngle = normalizeAngle(targetAngle + 90);
+            } else {
+                telemetry.addData("STATE", ": Turning right...");
+                targetAngle = normalizeAngle(targetAngle - 90);
+            }
+
+        } else {
+            telemetry.addData("ACTION", "Moving from beacon to beacon line");
         }
 
         return retCode;
@@ -543,12 +575,32 @@ public class DryIceAuto extends DryIceTeleOp {
         int stateCode = startState;
         stateCode = endState;
         return stateCode;
+//        int stateCode = startState;
+//        int armPosition = motorTopRight.getCurrentPosition();
+//        if ( Math.abs(armPosition-dumpClimberArmPosition) > dumpArmDelta/2) {
+//            if (motorTopRight.getMode() != DcMotorController.RunMode.RUN_TO_POSITION) {
+//                motorTopRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
+//            }
+//            motorTopRight.setTargetPosition(dumpClimberArmPosition);
+//            motorTopRight.setPower(0.45);
+//        }
+//        else if (!motorTopRight.isBusy())
+//        {
+//            stateCode = endState;
+//            telemetry.addData("STATE", ": dump climber done");
+//        }
+//
+//        return stateCode;
     }
 
     int climbRamp(int startState, int endState) {
-        int stateCode = startState;
-        stateCode = endState;
-        return stateCode;
+//        int stateCode = startState;
+//        stateCode = endState;
+//        return stateCode;
+        int retCode = goStraight(startState, endState, cruisePower, RampDistance, 30000);
+        //elevator.setPosition(elevatorUpPosition);
+        //ResQUtils.moveMotorByPower(motorClimber, -0.1f);
+        return retCode;
     }
 
     void turnLeft(double power) {
@@ -593,6 +645,32 @@ public class DryIceAuto extends DryIceTeleOp {
         // turn
         double left = Range.clip(power + turn, -1.0, 1.0);
         double right = Range.clip(power -turn, -1.0, 1.0);
+        motorBottomRight.setPower(left);
+        motorBottomLeft.setPower(right);
+        telemetry.addData("SKEW", String.format("%.2g", skew) + "degree");
+        telemetry.addData("WHEEL", "left pwr:" + String.format("%.2g", left) +
+                " right pwr:" + String.format("%.2g", right) +
+                " turn pwr:" + String.format("%.2g", turn));
+        lastSkew = skew;
+        return skew;
+    }
+
+    float maintainAngleBackUp(float target, float current, double power) {
+        float skew = getAngleDelta((int)current, (int)target);
+        double turn = getDeltaPowerByDeltaAngle(skew, targetAngleTolerance*0.0056f);
+
+        // increase turn power if stuck
+        if ( Math.abs(skew - lastSkew) < targetAngleTolerance) {
+            skewPowerScale *= skewPowerGain;
+        }
+        else {
+            skewPowerScale = 1.0f;
+        }
+        turn *= skewPowerScale;
+
+        // turn
+        double left = Range.clip(power - turn, -1.0, 1.0);
+        double right = Range.clip(power + turn, -1.0, 1.0);
         motorBottomRight.setPower(left);
         motorBottomLeft.setPower(right);
         telemetry.addData("SKEW", String.format("%.2g", skew) + "degree");
@@ -672,15 +750,32 @@ public class DryIceAuto extends DryIceTeleOp {
         return startState;
     }
 
+    int backupStraight(int startState, int endState, float power, int distanceLimit, long timeLimit) {
+
+        int distanceWheel = getOdometer();
+        telemetry.addData("ODOMETER", "encoder: " + String.format("%05d", distanceWheel));
+
+        if (Math.abs(distanceWheel) > distanceLimit
+                || System.currentTimeMillis() - lastStateTimeStamp > timeLimit) { // time out
+            // stop at the center blue/red line
+            motorBottomRight.setPower(0);
+            motorBottomLeft.setPower(0);
+            lastStateTimeStamp = System.currentTimeMillis();
+            leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
+            rightWheelStartPos = motorBottomRight.getCurrentPosition();
+            return endState;
+        } else {
+            telemetry.addData("STATE", ": Backup Straight...");
+            maintainAngleBackUp(targetAngle, currentGyro, power);
+        }
+        return startState;
+    }
+
     int turn(int startState, int endState, double power, int currentAngle, int stopAngle) {
 
         if (Math.abs(currentAngle - stopAngle) < targetAngleTolerance) {
             telemetry.addData("STATE", ": Turn done");
-            motorBottomRight.setPower(0.0);
-            motorBottomLeft.setPower(0.0);
-            lastStateTimeStamp = System.currentTimeMillis();
-            leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
-            rightWheelStartPos = motorBottomRight.getCurrentPosition();
+            setLandMark();
             return endState;
         } else {
             maintainAngle(stopAngle, currentAngle, power);
@@ -697,6 +792,14 @@ public class DryIceAuto extends DryIceTeleOp {
     int getOdometer() {
         return (motorBottomLeft.getCurrentPosition()-leftWheelStartPos
                 +motorBottomRight.getCurrentPosition()-rightWheelStartPos)/2;
+    }
+
+    void setLandMark () {
+        motorBottomLeft.setPower(0.0);
+        motorBottomRight.setPower(0.0);
+        leftWheelStartPos =  motorBottomLeft.getCurrentPosition();
+        rightWheelStartPos = motorBottomRight.getCurrentPosition();
+        lastStateTimeStamp = System.currentTimeMillis();
     }
 }
 
