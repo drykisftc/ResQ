@@ -56,7 +56,7 @@ public class DryIceBeacon extends DryIceAuto {
         StarLineToCenterLineDistance = 1500;
         CenterlineToBeaconLineDistance = 6800;
         BeaconLineToBeaconDistance = 3500;
-        RampLineToBeaconLineDistance = 5300;
+        RampLineToBeaconLineDistance = 5700;
         BeaconToBeaconLine = 3500;
         turnAngle = 45;
         dumpArmDelta = 2900;
@@ -135,14 +135,17 @@ public class DryIceBeacon extends DryIceAuto {
                     stateDryIce = dropClimber(7, 8);
                     break;
                 case 8:
-                    // touch the button
-                    stateDryIce = touchButton(8, 9);
+                    stateDryIce = waitSeconds(8,9,2000);
                     break;
                 case 9:
-                    stateDryIce = turn(9,10, 0.0f, currentGyro, targetAngle);
+                    // touch the button
+                    stateDryIce = touchButton(9, 10);
                     break;
                 case 10:
-                    stateDryIce = goStraight(10, 11, cruisePower, BeaconToBeaconLine, 10000);
+                    stateDryIce = turn(10, 11, 0.0f, currentGyro, targetAngle);
+                    break;
+                case 11:
+                    stateDryIce = goStraight(11, 12, cruisePower, BeaconToBeaconLine, 10000);
                     break;
                 default:
                     stop();
@@ -236,7 +239,7 @@ public class DryIceBeacon extends DryIceAuto {
                 motorTopRight.setMode(DcMotorController.RunMode.RUN_TO_POSITION);
             }
             motorTopRight.setTargetPosition(rightArmUpperLimit + 300);
-            motorTopRight.setPower(0.3);
+            motorTopRight.setPower(0.35);
 
         }
         else if (!motorTopRight.isBusy())
