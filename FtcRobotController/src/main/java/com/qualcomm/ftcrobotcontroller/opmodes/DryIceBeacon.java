@@ -55,9 +55,9 @@ public class DryIceBeacon extends DryIceAuto {
         teamColor = 'b';
         StarLineToCenterLineDistance = 1500;
         CenterlineToBeaconLineDistance = 6800;
-        BeaconLineToBeaconDistance = 3500;
+        BeaconLineToBeaconDistance = 4300;
         RampLineToBeaconLineDistance = 5700;
-        BeaconToBeaconLine = 3500;
+        BeaconToBeaconLine = 3600;
         turnAngle = 45;
         dumpArmDelta = 2900;
         collisionDistThreshold = 30;
